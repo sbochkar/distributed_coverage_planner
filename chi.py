@@ -1,6 +1,7 @@
 from math import sqrt
 
 from shapely.geometry import LinearRing
+from shapely.geometry import LineString
 
 from polygon_area import polygon_area
 
@@ -50,11 +51,18 @@ def compute_num_contours(polygon=[[],[]], radius=1):
 	"""
 
 	boundary = LinearRing(polygon[0])
-
+	#boundary = LineString(polygon[0])
+	#boundary = LineString(polygon[0]+[polygon[0][0]])
+	#print("Boundary: %s"%boundary)
 	# Since working on the boundary, left should be valid all the time
 	num_contours = 0
 	while not boundary.parallel_offset((2*num_contours+1)*radius/2.0, 'left').is_empty:
-		num_contours += 1	
+		num_contours += 1
+		#print boundary.parallel_offset((2*num_contours+1)*radius/2.0, 'left')
+
+		if num_contours>200:
+			print "parallel_offset did not coverge"
+			break
 
 	return num_contours	
 

@@ -53,12 +53,15 @@ def plot_decomposition(ax, decomposition, shared_edges, P):
 	minx, miny, maxx, maxy = P.bounds
 
 	# Plot individual cells
-	for poly in decomposition:
+	for i, poly in enumerate(decomposition):
 
 		poly_shp = Polygon(*poly)
 		x, y = poly_shp.exterior.xy
 		ax.plot(x, y, color='#6699cc', alpha=0.7,
 				linewidth=3, solid_capstyle='round', zorder=1)
+
+		centroid = poly_shp.centroid
+		ax.annotate(i, (centroid.x, centroid.y))
 
 	# Plot individual shared edge
 	num_nodes = len(shared_edges)
@@ -67,17 +70,37 @@ def plot_decomposition(ax, decomposition, shared_edges, P):
 
 			if shared_edges[i][j] is not None:
 				x, y = zip(*shared_edges[i][j])
-				ax.plot(x, y, color='red', alpha=0.8, linewidth=3, zorder=2)
+				ax.plot(x, y, color='red', alpha=0.8, linewidth=1, zorder=2, marker="o")
 
 	ax.set_xlim([minx-0.5,maxx+0.5])
 	ax.set_ylim([miny-0.5,maxy+0.5])
 
 
-def plot_init_poss(ax, segments):
-	#for segment in segments:
-	#	x, y = segment
+def plot_init_poss_and_assignment(ax, segments, cell_to_site_map, decomposition):
+
+	for poly_id, poly in enumerate(decomposition):
+		poly_shp = Polygon(*poly)
+		centroid = poly_shp.centroid
+
+		site_x, site_y = cell_to_site_map[poly_id]
+		ax.plot([site_x, centroid.x], [site_y, centroid.y], color="green", marker = 'o')
+		#ax.annotate(i, (centroid.x, centroid.y))
+
+
 	ax.scatter(*zip(*segments), color='blue', alpha=0.9, linewidth=10, zorder=1)	
 
+	#ax.relim()
+	# update ax.viewLim using the new dataLim
+	ax.autoscale()
+
+
+
+def plot_init_poss(ax, segments):
+	ax.scatter(*zip(*segments), color='blue', alpha=0.9, linewidth=10, zorder=1)	
+
+	#ax.relim()
+	# update ax.viewLim using the new dataLim
+	ax.autoscale()
 
 
 def plot_samples(ax, segments):
@@ -233,6 +256,10 @@ def plot_tour_dubins(ax, tour, dict_map, r):
 		#dy = i_pt[1] - o_pt[1]
 
 		ax.arrow(xarrow, yarrow, dx, dy, head_width=0.15, ec='green', length_includes_head=True, zorder=4)
+
+
+def update(ax):
+	ax.canvas.draw()
 
 
 def display():

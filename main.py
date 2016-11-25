@@ -42,8 +42,11 @@ adj_matrix = adj.get_adjacency_as_matrix(decomp)
 
 
 
-print pair_wise_reoptimization(2, 1, decomp, adj_matrix, cell_to_site_map)
-
+if pair_wise_reoptimization(2,1, decomp, adj_matrix, cell_to_site_map):
+	if DEBUG:
+		print("[..] Reopt is performed!")
+	mad.post_processs_decomposition(decomp)
+	adj_matrix = adj.get_adjacency_as_matrix(decomp)
 
 
 print("[..] Plotting the original polygon and sites.")

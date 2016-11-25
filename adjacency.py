@@ -1,4 +1,4 @@
-
+from shapely.geometry import LineString
 
 def get_adjacency_as_matrix(P_set):
 	"""
@@ -28,8 +28,16 @@ def get_adjacency_as_matrix(P_set):
 					has_overlap, coords = edges.check_for_overlap(edge1, edge2)
 					if has_overlap:
 #						print coords
-						adj_matrix[p1_idx][p2_idx] = coords
-						adj_matrix[p2_idx][p1_idx] = coords
+						if not adj_matrix[p1_idx][p2_idx] is None:
+							old_line = LineString(adj_matrix[p1_idx][p2_idx])
+							current_line = LineString(coords)
+
+							if current_line.length > old_line:
+								adj_matrix[p1_idx][p2_idx] = coords
+								adj_matrix[p2_idx][p1_idx] = coords
+						else:
+							adj_matrix[p1_idx][p2_idx] = coords
+							adj_matrix[p2_idx][p1_idx] = coords			
 
 	return adj_matrix
 

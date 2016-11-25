@@ -44,6 +44,7 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 						lin_penalty=LIN_PENALTY,
 						angular_penalty=ANGULAR_PENALTY)
 	max_chi = max(chi_l, chi_r)
+	old_max_chi = max_chi
 
 
 	# Combine the polygons
@@ -160,7 +161,7 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 
 		if DEBUG:
 			print("[..] Improving cut was found: %s"%(cut,))
-			print("[..] Max cost is now: %f"%max_chi)
+			print("[..] Max cost Before: %f Now: %f"%(old_max_chi,max_chi))
 
 		return True
 	else:

@@ -83,8 +83,8 @@ def plot_init_poss_and_assignment(ax, segments, cell_to_site_map, decomposition)
 		centroid = poly_shp.centroid
 
 		site_x, site_y = cell_to_site_map[poly_id]
-		ax.plot([site_x, centroid.x], [site_y, centroid.y], color="green", marker = 'o')
-		#ax.annotate(i, (centroid.x, centroid.y))
+		#ax.plot([site_x, centroid.x], [site_y, centroid.y], color="green", marker = 'o')
+		ax.annotate(poly_id, (site_x, site_y))
 
 
 	ax.scatter(*zip(*segments), color='blue', alpha=0.9, linewidth=10, zorder=1)	

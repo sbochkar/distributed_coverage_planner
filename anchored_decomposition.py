@@ -161,7 +161,7 @@ def actually_do_decomposition():
 			# Find the cut space from v_s
 			#print cell_union, v_s
 			cut_space = cuts.find_cut_space(cell_union, v_s, is_reflex=is_reflex)
-			cut_space_points=[]
+			cut_space_points = []
 			for segment in cut_space:
 				cut_space_points.extend(segment)
 			cut_space_ls = LineString(cut_space_points)

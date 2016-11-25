@@ -2,6 +2,7 @@ from math import sqrt
 
 from shapely.geometry import LinearRing
 from shapely.geometry import LineString
+from shapely.geometry import Polygon
 
 from polygon_area import polygon_area
 
@@ -42,6 +43,7 @@ def min_dist_to_boundary(polygon=[[],[]], init_pos=(0,0)):
 	return closest_dist
 
 
+
 def compute_num_contours(polygon=[[],[]], radius=1):
 	"""
 	Computing contours of P
@@ -50,21 +52,30 @@ def compute_num_contours(polygon=[[],[]], radius=1):
 	P=(z0,z1,...)
 	"""
 
-	boundary = LinearRing(polygon[0])
+	test_polygon = Polygon(*polygon)
+
+	num_contours = 0
+	while not test_polygon.buffer(-(2*num_contours+1)*radius/2.0).is_empty:
+		num_contours += 1
+
+	return num_contours
+
+	#boundary = LinearRing(polygon[0])
 	#boundary = LineString(polygon[0])
 	#boundary = LineString(polygon[0]+[polygon[0][0]])
 	#print("Boundary: %s"%boundary)
 	# Since working on the boundary, left should be valid all the time
-	num_contours = 0
-	while not boundary.parallel_offset((2*num_contours+1)*radius/2.0, 'left').is_empty:
-		num_contours += 1
-		#print boundary.parallel_offset((2*num_contours+1)*radius/2.0, 'left')
+	#num_contours = 0
+	#new_contour = boundary.parallel_offset((2*num_contours+1)*radius/2.0, 'left', resolution=20, mitre_limit=2.0)
+	#while new_contour.is_empty:
+	#	if num_contours>50:
+	#		print "parallel_offset did not coverge"
+	#		break
+		
+	#	num_contours += 1
+	#	new_contour = boundary.parallel_offset((2*num_contours+1)*radius/2.0, 'left', resolution=1)
 
-		if num_contours>200:
-			print "parallel_offset did not coverge"
-			break
-
-	return num_contours	
+	#return num_contours	
 
 
 

@@ -521,7 +521,10 @@ def perform_cut(P, e):
 			left_chain, right_chain = cut(chain, distance_to_v)
 
 			p_l = left_chain.coords[:]
-			p_r = right_chain.coords[:]		
+			if right_chain:
+				p_r = right_chain.coords[:]
+			else:
+				p_r = []
 		else:
 			if distance_to_v == 0:
 				distance_to_w = chain.project(Point(w))
@@ -581,7 +584,7 @@ def cut(line, distance):
 	"""
 	# Cuts a line in two at a distance from its starting point
 	if distance <= 0.0 or distance >= line.length:
-		print("ERROR: CUT BEYONG LENGTH")
+		print("ERROR: CUT BEYOND LENGTH")
 		print line
 		print(distance)
 		return [LineString(line), []]

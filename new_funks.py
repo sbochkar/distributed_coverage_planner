@@ -23,6 +23,8 @@ def reopt_recursion(decomp=[], adj_matrix=[], v_max_id=0, cell_to_site_map=[]):
 	This function will recursively look for the 
 	"""
 
+	reopt_recursion.level += 1
+	print("[..] Recursion level: %d"%reopt_recursion.level)
 	# Compute the v_max cost
 	v_max_cost = chi.chi(polygon=decomp[v_max_id], init_pos=cell_to_site_map[v_max_id],
 						radius=RADIUS, lin_penalty=LIN_PENALTY,
@@ -65,9 +67,11 @@ def reopt_recursion(decomp=[], adj_matrix=[], v_max_id=0, cell_to_site_map=[]):
 				#adj_matrix = adj.get_adjacency_as_matrix(decomp)
 				if DEBUG:
 					print("[..] Cells %d and %d reopted."%(v_max_id, v_i_idx))
-				return
+				return True
 			else:
-				reopt_recursion(decomp, adj_matrix, v_i_idx, cell_to_site_map)
+				if reopt_recursion(decomp, adj_matrix, v_i_idx, cell_to_site_map):
+					break
+	return False
 
 				#mad.post_processs_decomposition(decomp)
 				#adj_matrix = adj.get_adjacency_as_matrix(decomp)
@@ -119,6 +123,9 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 
 
 	# Combine the polygons
+	#print decomposition[cell_a_id]
+	#print decomposition[cell_b_id]
+	#print adj_matrix[cell_a_id][cell_b_id]
 	cell_union = op.union_two_cells(decomposition[cell_a_id], decomposition[cell_b_id],
 									adj_matrix[cell_a_id][cell_b_id])
 	if DEBUG: 
@@ -165,6 +172,8 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 			continue
 
 		p_l, p_r = cuts.perform_cut(cell_union, cut)
+		if not p_r:
+			continue
 		# Quick and dirty method to eliminate edge cases
 		if len(p_r) < 3 or len(p_l) < 3:
 			continue
@@ -236,4 +245,5 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 
 		return True
 	else:
+		print("[..] Improving cut was NOT found: %s"%(cut,))
 		return False

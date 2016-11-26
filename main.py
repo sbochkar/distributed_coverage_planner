@@ -46,7 +46,7 @@ def pretty_print_decomp(decomp):
 
 
 # Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 0
+POLY_ID = 1
 orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment
@@ -61,7 +61,7 @@ adj_matrix = adj.get_adjacency_as_matrix(decomp)
 
 
 
-M = 4
+M = 10
 iterations = 0
 while iterations < M:
 	iterations += 1
@@ -82,18 +82,20 @@ while iterations < M:
 	mad.collinear_correction(decomp)
 	mad.post_processs_decomposition(decomp)
 	adj_matrix = adj.get_adjacency_as_matrix(decomp)
+
+	reopt_recursion.level = 0
 	reopt_recursion(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map)
 	pretty_print_decomp(decomp)
 
 
 
-	print("[..] Plotting the original polygon and sites.")
-	#Initialize plotting tools
-	ax = splot.init_axis()
-	splot.plot_polygon_outline(ax, orig_poly)
-	splot.plot_decomposition(ax, decomp, adj_matrix, orig_poly)
-	splot.plot_init_poss_and_assignment(ax, sites, cell_to_site_map, decomp)
-	splot.display()
+print("[..] Plotting the original polygon and sites.")
+#Initialize plotting tools
+ax = splot.init_axis()
+splot.plot_polygon_outline(ax, orig_poly)
+splot.plot_decomposition(ax, decomp, adj_matrix, orig_poly)
+splot.plot_init_poss_and_assignment(ax, sites, cell_to_site_map, decomp)
+splot.display()
 
 
 

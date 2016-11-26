@@ -46,7 +46,7 @@ def pretty_print_decomp(decomp):
 
 
 # Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 1
+POLY_ID = 3
 orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment
@@ -61,7 +61,7 @@ adj_matrix = adj.get_adjacency_as_matrix(decomp)
 
 
 
-M = 10
+M = 20
 iterations = 0
 while iterations < M:
 	iterations += 1

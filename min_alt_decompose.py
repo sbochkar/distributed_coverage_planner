@@ -5,6 +5,8 @@ import operator
 import itertools
 import adjacency
 import edges
+import cuts
+
 
 def get_first_shared_edge(v, adj):
 
@@ -80,6 +82,22 @@ def round_vertecies(p):
 def euc_distance(p1, p2):
 	return sqrt((p2[1]-p1[1])**2+(p2[0]-p1[0])**2)
 
+
+def collinear_correction(decomp):
+
+	for poly in decomp:
+		boundary = poly[0]
+		i = 0
+		while i < len(boundary):
+			p1 = boundary[i]
+			p2 = boundary[(i+1)%len(boundary)]
+			p3 = boundary[(i+2)%len(boundary)]
+			if cuts.collinear(p1, p2, p3):
+				del boundary[(i+1)%len(boundary)]
+			i += 1
+
+
+
 def post_processs_decomposition(decomp):
 
 	for a in range(len(decomp)):
@@ -91,7 +109,8 @@ def post_processs_decomposition(decomp):
 			p1_new = p1
 			p2_new = p2
 
-			n1 = len(p1); n2 = len(p2)
+			n1 = len(p1)
+			n2 = len(p2)
 
 			# Test every pair of edges from both polygons to see equality
 			for i in range(n1):

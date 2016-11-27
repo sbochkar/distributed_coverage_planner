@@ -3,6 +3,7 @@ from math import sqrt
 from shapely.geometry import LinearRing
 from shapely.geometry import LineString
 from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon
 
 from polygon_area import polygon_area
 
@@ -54,9 +55,21 @@ def compute_num_contours(polygon=[[],[]], radius=1):
 
 	test_polygon = Polygon(*polygon)
 
+	#num_contours = 0
+	#while not test_polygon.buffer(-(2*num_contours+1)*radius/2.0).is_empty:
+	#	num_contours += 1
+
+
+	level = 0
 	num_contours = 0
-	while not test_polygon.buffer(-(2*num_contours+1)*radius/2.0).is_empty:
-		num_contours += 1
+	test_polygon = test_polygon.buffer(-(2*level+1)*radius/2.0)
+	while not test_polygon.is_empty:
+		test_polygon = test_polygon.buffer(-(2*level+1)*radius/2.0)
+		level += 1		
+		if type(test_polygon) is MultiPolygon:
+			num_contours += len(test_polygon)
+		else:
+			num_contours += 1
 
 	return num_contours
 
@@ -81,10 +94,10 @@ def compute_num_contours(polygon=[[],[]], radius=1):
 
 
 #P = [[(0,0),(1,0),(1,1),(0,1)],[]]
-#P = [[(0,0),(10,0),(10,1),(0,1)],[]]
+#P = [[(0,0),(4,0),(4,1),(6,1),(6,0),(10,0),(10,3),(6,3),(6,2),(4,2),(4,3),(0,3)],[]]
 #q = (-1,-1)
 #r = 0.5
 
 #print chi(polygon=P, init_pos=q, radius=r, lin_penalty=1.0, angular_penalty=1.0/360.0)
 #print polygon_area(polygon=P)/r
-#print compute_num_contours(polygon=P, radius=r)
+#print compute_num_contours(polygon=P, radius=0.1)

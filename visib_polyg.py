@@ -9,7 +9,8 @@ def compute(v, P):
 
 	#print("Previsible polygon: %s"%(P,))
 	# Used for visilibity library
-	epsilon = 0.01
+	#epsilon = 0.01
+	epsilon = 0.001
 
 	#Using the visilibity library, define the reflex vertex
 	observer = vis.Point(*v[1])

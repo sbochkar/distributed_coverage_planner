@@ -175,10 +175,10 @@ def find_cut_space(P, v, is_reflex=True):
 	#print P
 	#print c_of_b
 	intersection = c_of_b.intersection(P)
-#	print("Intersection: %s"%intersection)
+	#print("Intersection: %s"%intersection)
 
 	intersection = get_closest_intersecting_polygon(intersection, v)
-#	print("Closest Intersection object: %s"%(intersection,))
+	#print("Closest Intersection object: %s"%(intersection,))
 
 
 	P_vis = []; vis_holes = []
@@ -186,8 +186,9 @@ def find_cut_space(P, v, is_reflex=True):
 	for hole in intersection.interiors:
 		vis_holes.append(hole.coords[:])
 	P_vis.append(vis_holes)
-
+	#print P_vis
 	point_x, point_y = visib_polyg.compute(v, P_vis)
+	#print point_x, point_y
 #	point_x, point_y = visib_polyg.compute(v, [P.exterior.coords[:],[]])
 	visible_polygon = Polygon(zip(point_x, point_y))
 #	print("Visible polygon: %s"%(visible_polygon,))

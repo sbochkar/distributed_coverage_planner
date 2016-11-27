@@ -178,6 +178,14 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 		if len(p_r) < 3 or len(p_l) < 3:
 			continue
 
+		# Check if the polygons are self-intersecting
+		if not LineString(p_r).is_simple:
+			print "self intersecting"
+			continue
+		if not LineString(p_l).is_simple:
+			print "self intersecting"
+			continue
+
 		# Because I lost the relationship between what site belongs to what
 		# 	I need to recompute that
 		boundary_l = list(p_l)

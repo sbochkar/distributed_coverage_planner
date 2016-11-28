@@ -11,9 +11,9 @@ import cuts
 from shapely.geometry import LineString
 
 
-DEBUG = 1
+DEBUG = []
 NUM_SAMPLES = 100
-RADIUS = 0.1
+RADIUS = 0.2
 LIN_PENALTY = 1.0
 ANGULAR_PENALTY = 1.0/360
 
@@ -24,7 +24,8 @@ def reopt_recursion(decomp=[], adj_matrix=[], v_max_id=0, cell_to_site_map=[]):
 	"""
 
 	reopt_recursion.level += 1
-	print("[..] Recursion level: %d"%reopt_recursion.level)
+	if DEBUG:
+		print("[..] Recursion level: %d"%reopt_recursion.level)
 	# Compute the v_max cost
 	v_max_cost = chi.chi(polygon=decomp[v_max_id], init_pos=cell_to_site_map[v_max_id],
 						radius=RADIUS, lin_penalty=LIN_PENALTY,
@@ -39,7 +40,8 @@ def reopt_recursion(decomp=[], adj_matrix=[], v_max_id=0, cell_to_site_map=[]):
 	for cell_id, cell in enumerate(adj_matrix[v_max_id]):
 		if not cell is None:
 			neighbors.append(cell_id)
-	print("[.] Neighbors: %s"%(neighbors,))
+	if DEBUG:
+		print("[.] Neighbors: %s"%(neighbors,))
 
 
 	# Comptue the cost matrix for adjacent cells
@@ -60,7 +62,8 @@ def reopt_recursion(decomp=[], adj_matrix=[], v_max_id=0, cell_to_site_map=[]):
 	for v_i_idx, n_cost in n_chi_costs:
 
 		if n_cost < v_max_cost:
-			print("[..] Attempting %d and %d."%(v_max_id, v_i_idx))
+			if DEBUG:
+				print("[..] Attempting %d and %d."%(v_max_id, v_i_idx))
 			#print decomp
 			if pair_wise_reoptimization(v_max_id, v_i_idx, decomp, adj_matrix, cell_to_site_map):
 				#mad.post_processs_decomposition(decomp)
@@ -94,11 +97,6 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 	This function modifies decomposition and cell_to_site_map
 	
 	"""
-	DEBUG = 1
-	NUM_SAMPLES = 100
-	RADIUS = 0.1
-	LIN_PENALTY = 1.0
-	ANGULAR_PENALTY = 1.0/360
 
 	# Sanity check: two polygons are adjancent
 	if not adj_matrix[cell_a_id][cell_b_id]:
@@ -180,10 +178,12 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 
 		# Check if the polygons are self-intersecting
 		if not LineString(p_r).is_simple:
-			print "self intersecting"
+			if DEBUG:
+				print "self intersecting"
 			continue
 		if not LineString(p_l).is_simple:
-			print "self intersecting"
+			if DEBUG:
+				print "self intersecting"
 			continue
 
 		# Because I lost the relationship between what site belongs to what
@@ -253,5 +253,6 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 
 		return True
 	else:
-		print("[..] Improving cut was NOT found: %s"%(cut,))
+		if DEBUG:
+			print("[..] Improving cut was NOT found: %s"%(cut,))
 		return False

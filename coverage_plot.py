@@ -20,7 +20,7 @@ def init_axis():
 	return ax
 
 
-def plot_polygon_outline(ax, polygon):
+def plot_polygon_outline(ax, polygon, idx=0):
 	"""
 	Function will plot the ouline of cleaning area. No decomposition.
 	Adjust the axis as well.
@@ -29,10 +29,12 @@ def plot_polygon_outline(ax, polygon):
 	:return: None
 	"""
 
+	color_id = ["white","green","red","blue","yellow","pink"]
+
 	P = Polygon(*polygon)
 	min_x, min_y, max_x, max_y = P.bounds
 
-	patch = PolygonPatch(P, fc='white', ec='#6699cc', linewidth=3) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
+	patch = PolygonPatch(P, alpha=0.2, fc=color_id[idx], ec='#6699cc', linewidth=3) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
 	ax.add_patch(patch)
 	#x, y= P.xy
 	#ax.plot(x,y)
@@ -255,7 +257,7 @@ def plot_tour_dubins(ax, tour, dict_map, r):
 		#dx = i_pt[0] - o_pt[0]
 		#dy = i_pt[1] - o_pt[1]
 
-		ax.arrow(xarrow, yarrow, dx, dy, head_width=0.15, ec='green', length_includes_head=True, zorder=4)
+		#ax.arrow(xarrow, yarrow, dx, dy, head_width=0.15, ec='green', length_includes_head=True, zorder=4)
 
 
 def update(ax):

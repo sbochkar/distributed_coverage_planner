@@ -256,6 +256,7 @@ def decompose(P):
 	P_fused, modified_edges = chain_combination.combine_chains(P, theta)
 
 	#D = recursive_cuts(P_fused)
+	recursive_cuts.list_of_polygons = []
 	recursive_cuts(P_fused)
 	#print("List of polygons after recursion: %s"%(list_of_polygons,))
 
@@ -265,10 +266,10 @@ def decompose(P):
 	#		D = [D]
 
 
-	return list_of_polygons
+	return recursive_cuts.list_of_polygons
 
 
-list_of_polygons = []
+#list_of_polygons = []
 def recursive_cuts(P):
 	"""
 	Recursive cut of Polygon
@@ -290,7 +291,7 @@ def recursive_cuts(P):
 			recursive_cuts([p_r,[]])
 			return
 	#return P
-	list_of_polygons.append(P)
+	recursive_cuts.list_of_polygons.append(P)
 
 
 #if __name__ == '__main__':
@@ -300,10 +301,11 @@ def recursive_cuts(P):
 #		from aux.geometry import rotation
 #		import reflex
 #else:
-#	from ...aux.altitudes import altitude as alt
+import altitude as alt
 #	from ...decompositions.min_alt import cuts
-#	from ...poly_operations.others import chain_combination
-#	from ...poly_operations.others import reflex
+import chain_combination
+import reflex
 import operations
 import adjacency
+
 #	from ...aux.geometry import edges

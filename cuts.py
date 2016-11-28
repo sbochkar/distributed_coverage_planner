@@ -107,6 +107,9 @@ def find_optimal_cut(P, v):
 		cut_point = si[0]
 		#print P, v, cut_point
 		p_l, p_r = perform_cut(P, [v[1], cut_point])
+		if p_l is None and p_r is None:
+			continue
+
 
 		dirs_left = directions.get_directions_set([p_l, []])
 		dirs_right = directions.get_directions_set([p_r, []])
@@ -131,6 +134,8 @@ def find_optimal_cut(P, v):
 	# Evaluate all transition points
 	for case in pois:
 		p_l, p_r = perform_cut(P, [v[1], case[0]])
+		if p_l is None and p_r is None:
+			continue
 		a_l = alt.get_altitude([p_l, []], case[1])
 		a_r = alt.get_altitude([p_r, []], case[2])
 
@@ -513,6 +518,8 @@ def perform_cut(P, e):
 
 	distance_to_v = chain.project(Point(v))
 	distance_to_w = chain.project(Point(w))
+	if distance_to_v == 0.0 and distance_to_w == 0.0:
+		return (None,None)
 	#print("D_to_w: %7f, D_to_v: %2f"%(distance_to_w, distance_to_v))
 
 	if distance_to_w > distance_to_v:

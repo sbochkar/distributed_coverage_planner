@@ -63,7 +63,7 @@ def plot_decomposition(ax, decomposition, shared_edges, P):
 				linewidth=3, solid_capstyle='round', zorder=1)
 
 		centroid = poly_shp.centroid
-		ax.annotate(i, (centroid.x, centroid.y))
+		#ax.annotate(i, (centroid.x, centroid.y))
 
 	# Plot individual shared edge
 	num_nodes = len(shared_edges)
@@ -86,7 +86,7 @@ def plot_init_poss_and_assignment(ax, segments, cell_to_site_map, decomposition)
 
 		site_x, site_y = cell_to_site_map[poly_id]
 		#ax.plot([site_x, centroid.x], [site_y, centroid.y], color="green", marker = 'o')
-		ax.annotate(poly_id, (site_x, site_y))
+		#ax.annotate(poly_id, (site_x, site_y))
 
 
 	ax.scatter(*zip(*segments), color='blue', alpha=0.9, linewidth=10, zorder=1)	

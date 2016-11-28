@@ -6,13 +6,13 @@ import greedy_decompose
 import adjacency
 import coverage_plot as splot
 import min_alt_decompose
-
+import classes
 
 
 GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
 
 
-def single_planner(decomp, radius=1.0, orig_poly=[]):
+def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
 	"""
 	Single agent path planner:
 	"""
@@ -22,7 +22,8 @@ def single_planner(decomp, radius=1.0, orig_poly=[]):
 	segment_list = []
 	map_list = []
 	tours = []
-	for region in decomp:
+	print cell_to_site_map[1]
+	for idx, region in enumerate(decomp):
 
 		#single_decomp = greedy_decompose.decompose(region)
 		#single_decomp = min_alt_decompose.decompose(region)
@@ -31,8 +32,9 @@ def single_planner(decomp, radius=1.0, orig_poly=[]):
 		adj_matrix_list.append(adjacency.get_adjacency_as_matrix(single_decomposition_list[-1]))
 
 
-		#segments = discrt.discritize_set(single_decomp, radius)
-		segment_list.append( discrt.discritize_set(single_decomposition_list[-1], radius))
+		segments = discrt.discritize_set(single_decomposition_list[-1], radius)
+		segments.append(classes.PointSegment((cell_to_site_map[idx])))
+		segment_list.append(segments)
 		#mapping = get_mapping.get_mapping(segments)
 		map_list.append(get_mapping.get_mapping(segment_list[-1]))
 		cost_matrix, cluster_list = dubins_cost.compute_costs(region, map_list[-1], radius/2)
@@ -46,8 +48,10 @@ def single_planner(decomp, radius=1.0, orig_poly=[]):
 		splot.plot_polygon_outline(ax, region, idx)
 		splot.plot_decomposition(ax, single_decomposition_list[idx], adj_matrix_list[idx], region)
 		splot.plot_samples(ax, segment_list[idx])
-		#splot.plot_init_poss_and_assignment(ax, sites, cell_to_site_map, decomp)
 		splot.plot_tour_dubins(ax, tours[idx], map_list[idx], radius/2)
+
+	sites = [points for idx, points in cell_to_site_map.items()]
+	splot.plot_init_poss_and_assignment(ax, sites, cell_to_site_map, decomp)
 	splot.display()
 
 

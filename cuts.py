@@ -520,6 +520,9 @@ def perform_cut(P, e):
 	distance_to_w = chain.project(Point(w))
 	if distance_to_v == 0.0 and distance_to_w == 0.0:
 		return (None,None)
+	if distance_to_v == distance_to_w:
+		return (None,None)
+
 	#print("D_to_w: %7f, D_to_v: %2f"%(distance_to_w, distance_to_v))
 
 	if distance_to_w > distance_to_v:

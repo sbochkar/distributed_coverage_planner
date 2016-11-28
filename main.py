@@ -78,7 +78,7 @@ print("[.] Original costs: %s"%chi_costs_sorted)
 
 
 
-M = 2
+M = 20
 iterations = 0
 while iterations < M:
 	iterations += 1
@@ -132,7 +132,7 @@ adj_matrix = adj.get_adjacency_as_matrix(decomp)
 #solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
 #tour = solver.read_tour("cpp_test")
 
-single_planner.single_planner(decomp, RADIUS, orig_poly)
+single_planner.single_planner(decomp, RADIUS, orig_poly, cell_to_site_map)
 
 #Initialize plotting tools
 #ax = splot.init_axis()

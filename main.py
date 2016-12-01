@@ -23,10 +23,10 @@ import solver
 import single_planner
 from new_funks import pair_wise_reoptimization
 from new_funks import reopt_recursion
+from new_funks import reopt_recursion_BFT
 
 
-
-GLKH_LOCATION = "/home/stan/misc/GLKH-1.0/"
+GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
 DEBUG = []
 NUM_SAMPLES = 10
@@ -51,7 +51,7 @@ def pretty_print_decomp(decomp):
 
 
 # Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 0
+POLY_ID = 4
 orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment
@@ -78,7 +78,7 @@ print("[.] Original costs: %s"%chi_costs_sorted)
 
 
 
-M = 20
+M = 40
 iterations = 0
 while iterations < M:
 	iterations += 1
@@ -101,7 +101,10 @@ while iterations < M:
 	adj_matrix = adj.get_adjacency_as_matrix(decomp)
 
 	reopt_recursion.level = 0
-	reopt_recursion(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map)
+	#reopt_recursion(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map)
+
+	q = [chi_costs_sorted[0][0]]
+	reopt_recursion_BFT(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map, q)
 	if DEBUG:
 		pretty_print_decomp(decomp)
 

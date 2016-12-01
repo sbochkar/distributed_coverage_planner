@@ -10,7 +10,7 @@ import classes
 import tour_length
 import tour_area
 
-GLKH_LOCATION = "/home/stan/misc/GLKH-1.0/"
+GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
 
 
 def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):

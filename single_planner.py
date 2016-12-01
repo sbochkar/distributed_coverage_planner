@@ -10,7 +10,7 @@ import classes
 import tour_length
 import tour_area
 
-GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
+GLKH_LOCATION = "/home/stan/misc/GLKH-1.0/"
 
 
 def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
@@ -38,7 +38,7 @@ def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
 		segment_list.append(segments)
 		#mapping = get_mapping.get_mapping(segments)
 		map_list.append(get_mapping.get_mapping(segment_list[-1]))
-		cost_matrix, cluster_list = dubins_cost.compute_costs(region, map_list[-1], radius/2)
+		cost_matrix, cluster_list = dubins_cost.compute_costs(region, map_list[-1], radius/2, orig_poly)
 		solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
 		#tour = solver.read_tour("cpp_test")
 		tours.append(solver.read_tour("cpp_test"))
@@ -55,10 +55,11 @@ def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
 	for idx, region in enumerate(decomp):
 		splot.plot_polygon_outline(ax, region, idx)
 		splot.plot_decomposition(ax, single_decomposition_list[idx], adj_matrix_list[idx], region)
-		splot.plot_samples(ax, segment_list[idx])
-		splot.plot_tour_dubins(ax, tours[idx], map_list[idx], radius/2)
+		splot.plot_samples(ax, segment_list[idx], idx)
+		splot.plot_tour_dubins(ax, tours[idx], map_list[idx], radius/2, idx)
 
 	sites = [points for idx, points in cell_to_site_map.items()]
+	splot.plot_main_polygon(ax, orig_poly)
 	splot.plot_init_poss_and_assignment(ax, sites, cell_to_site_map, decomp)
 	splot.display()
 

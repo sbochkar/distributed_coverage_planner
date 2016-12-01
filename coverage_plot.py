@@ -19,8 +19,7 @@ def init_axis():
 
 	return ax
 
-
-def plot_polygon_outline(ax, polygon, idx=0):
+def plot_main_polygon(ax, polygon):
 	"""
 	Function will plot the ouline of cleaning area. No decomposition.
 	Adjust the axis as well.
@@ -29,12 +28,33 @@ def plot_polygon_outline(ax, polygon, idx=0):
 	:return: None
 	"""
 
-	color_id = ["white","green","red","blue","yellow","pink"]
+	P = Polygon(*polygon)
+	#min_x, min_y, max_x, max_y = P.bounds
+
+	patch = PolygonPatch(P, alpha=0.9, fc='white', ec='black', linewidth=5, zorder=1, capstyle='round', fill=False, joinstyle='round') # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
+	ax.add_patch(patch)
+	#x, y= P.xy
+	#ax.plot(x,y)
+	#ax.set_xlim([min_x-0.5,max_x+0.5])
+	#ax.set_ylim([min_y-0.5,max_y+0.5])
+
+
+def plot_polygon_outline(ax, polygon, fc_idx=0):
+	"""
+	Function will plot the ouline of cleaning area. No decomposition.
+	Adjust the axis as well.
+	:param ax: Axis object for redundancy
+	:param polygon: Possibly with holes
+	:return: None
+	"""
+	colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
+	#color_id = ["white","green","red","blue","yellow","pink"]
 
 	P = Polygon(*polygon)
 	min_x, min_y, max_x, max_y = P.bounds
 
-	patch = PolygonPatch(P, alpha=0.2, fc=color_id[idx], ec='#6699cc', linewidth=3) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
+	#patch = PolygonPatch(P, alpha=0.2, fc=colors[fc_idx], ec='black', linewidth=3, linestyle='dashed',zorder=2) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
+	patch = PolygonPatch(P, alpha=0.2, fc=colors[fc_idx], ec='black', linewidth=3, linestyle='dashed',zorder=2, fill=False) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
 	ax.add_patch(patch)
 	#x, y= P.xy
 	#ax.plot(x,y)
@@ -55,15 +75,15 @@ def plot_decomposition(ax, decomposition, shared_edges, P):
 	minx, miny, maxx, maxy = P.bounds
 
 	# Plot individual cells
-	for i, poly in enumerate(decomposition):
-
-		poly_shp = Polygon(*poly)
-		x, y = poly_shp.exterior.xy
-		ax.plot(x, y, color='#6699cc', alpha=0.7,
-				linewidth=3, solid_capstyle='round', zorder=1)
-
-		centroid = poly_shp.centroid
-		#ax.annotate(i, (centroid.x, centroid.y))
+#	for i, poly in enumerate(decomposition):
+#
+#		poly_shp = Polygon(*poly)
+#		x, y = poly_shp.exterior.xy
+#		ax.plot(x, y, color='#6699cc', alpha=0.7,
+#				linewidth=3, solid_capstyle='round', zorder=1)
+#
+#		centroid = poly_shp.centroid
+#		#ax.annotate(i, (centroid.x, centroid.y))
 
 	# Plot individual shared edge
 	num_nodes = len(shared_edges)
@@ -72,24 +92,28 @@ def plot_decomposition(ax, decomposition, shared_edges, P):
 
 			if shared_edges[i][j] is not None:
 				x, y = zip(*shared_edges[i][j])
-				ax.plot(x, y, color='red', alpha=0.8, linewidth=1, zorder=2, marker="o")
+				ax.plot(x, y, color='red', alpha=0.5, linewidth=1, zorder=2, marker="o")
 
-	ax.set_xlim([minx-0.5,maxx+0.5])
-	ax.set_ylim([miny-0.5,maxy+0.5])
+#	ax.set_xlim([minx-0.5,maxx+0.5])
+#	ax.set_ylim([miny-0.5,maxy+0.5])
 
 
 def plot_init_poss_and_assignment(ax, segments, cell_to_site_map, decomposition):
 
-	for poly_id, poly in enumerate(decomposition):
-		poly_shp = Polygon(*poly)
-		centroid = poly_shp.centroid
+	#for poly_id, poly in enumerate(decomposition):
+	#	poly_shp = Polygon(*poly)
+	#	centroid = poly_shp.centroid
 
-		site_x, site_y = cell_to_site_map[poly_id]
-		#ax.plot([site_x, centroid.x], [site_y, centroid.y], color="green", marker = 'o')
-		#ax.annotate(poly_id, (site_x, site_y))
+	#	site_x, site_y = cell_to_site_map[poly_id]
+	#	#ax.plot([site_x, centroid.x], [site_y, centroid.y], color="green", marker = 'o')
+	#	#ax.annotate(poly_id, (site_x, site_y))
 
+	colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
+	for idx, segment in enumerate(segments):
 
-	ax.scatter(*zip(*segments), color='blue', alpha=0.9, linewidth=10, zorder=1)	
+		ax.scatter(*segment, color=colors[idx], alpha=0.9, linewidth=10, zorder=1)	
+
+	#ax.scatter(*zip(*segments), color='blue', alpha=0.9, linewidth=10, zorder=1)	
 
 	#ax.relim()
 	# update ax.viewLim using the new dataLim
@@ -105,7 +129,7 @@ def plot_init_poss(ax, segments):
 	ax.autoscale()
 
 
-def plot_samples(ax, segments):
+def plot_samples(ax, segments, idx=0):
 	"""
 	Function will plot the samples inside the cvx sets
 	:param ax: Axis object
@@ -114,14 +138,16 @@ def plot_samples(ax, segments):
 	"""
 
 	import classes
-
+	colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
 	for segment in segments:
 		if isinstance(segment, classes.PointSegment):
 			x, y = segment.coord
-			ax.scatter(x, y, color='orange', alpha=0.9, linewidth=3, zorder=3)	
+			#ax.scatter(x, y, color='orange', alpha=0.9, linewidth=1, zorder=3)	
+			ax.scatter(x, y, color=colors[idx], alpha=0.8, linewidth=1, zorder=3)	
 		elif isinstance(segment, classes.LineSegment):
 			x, y = zip(*segment.coords)
-			ax.plot(x, y, color='orange', alpha=0.9, linewidth=3, zorder=3)	
+			#ax.plot(x, y, color='orange', alpha=0.9, linewidth=3, zorder=3)	
+			ax.plot(x, y, color=colors[idx], alpha=0.8, linewidth=2, zorder=3)	
 
 
 def plot_grid(ax, grid):
@@ -211,7 +237,7 @@ def plot_tour(ax, tour, lines, dict_map):
 		ax.arrow(o_pt[0], o_pt[1], dx, dy, head_width=0.1, ec='green', length_includes_head=True, zorder=4)
 
 
-def plot_tour_dubins(ax, tour, dict_map, r):
+def plot_tour_dubins(ax, tour, dict_map, r, idx=0):
 	"""
 	Function will plot the GTSP tour.
 	:param ax:
@@ -222,7 +248,7 @@ def plot_tour_dubins(ax, tour, dict_map, r):
 
 	import math
 	import dubins
-
+	colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
 	n = len(tour)
 	for i in range(len(tour)):
 		outgoing_node_idx = tour[i]
@@ -253,7 +279,8 @@ def plot_tour_dubins(ax, tour, dict_map, r):
 				dy = y[int(math.floor(len(smpls)/2))-1] - y[int(math.floor(len(smpls)/2))-2]
 
 
-		ax.scatter(x, y, s=0.4, color='green', zorder=4)
+		#ax.scatter(x, y, s=0.4, color='green', zorder=4)
+		ax.scatter(x, y, alpha=1, s=0.4, color=colors[idx], linewidth=1, zorder=4)
 		#dx = i_pt[0] - o_pt[0]
 		#dy = i_pt[1] - o_pt[1]
 

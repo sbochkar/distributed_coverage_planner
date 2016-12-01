@@ -6,7 +6,7 @@ from shapely.geometry import LinearRing
 
 
 
-def compute_costs(P, mapping, radius):
+def compute_costs(P, mapping, radius, orig_poly):
 	"""
 	Compute dubins costs between path segments which could be either
 	a line or a point.
@@ -16,7 +16,7 @@ def compute_costs(P, mapping, radius):
 	"""
 
 
-	MAX_COST = 999999999
+	MAX_COST = 1000000
 	num_nodes = len(mapping)
 
 	r = radius
@@ -35,8 +35,10 @@ def compute_costs(P, mapping, radius):
 			x0 = q0[0]; y0 = q0[1]
 			x1 = q1[0]; y1 = q1[1]
 
-			if has_collision(P, [(x0, y0), (x1, y1)]):
-				length = 9999999
+			#if has_collision(P, [(x0, y0), (x1, y1)]):
+			if has_collision(orig_poly, [(x0, y0), (x1, y1)]):
+				length = 100*dubins.path_length(q0, q1, r)
+				length += 1000000
 			else:
 				length = 100*dubins.path_length(q0, q1, r)
 
@@ -69,7 +71,7 @@ def compute_tsp_costs(P, tsp_mapping, radius):
 	Compute direction free costs"
 	"""
 
-	MAX_COST = 999999999
+	MAX_COST = 1000000
 	num_nodes = len(tsp_mapping)
 
 	r = radius
@@ -89,7 +91,7 @@ def compute_tsp_costs(P, tsp_mapping, radius):
 			x1 = q1[0]; y1 = q1[1]
 
 			if has_collision(P, [(x0, y0), (x1, y1)]):
-				length = 9999999
+				length = 1000000
 			else:
 				length = sqrt((x1-x0)**2+(y1-y2)**2)
 

@@ -26,7 +26,7 @@ from new_funks import reopt_recursion
 
 
 
-GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
+GLKH_LOCATION = "/home/stan/misc/GLKH-1.0/"
 
 DEBUG = []
 NUM_SAMPLES = 10
@@ -51,7 +51,7 @@ def pretty_print_decomp(decomp):
 
 
 # Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 3
+POLY_ID = 0
 orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment

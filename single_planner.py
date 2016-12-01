@@ -7,7 +7,8 @@ import adjacency
 import coverage_plot as splot
 import min_alt_decompose
 import classes
-
+import tour_length
+import tour_area
 
 GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
 
@@ -41,6 +42,13 @@ def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
 		solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
 		#tour = solver.read_tour("cpp_test")
 		tours.append(solver.read_tour("cpp_test"))
+
+		print("Tour Length %2f."%tour_length.length(tours[-1], segments, cost_matrix))
+		#splot.display()
+		#print("Polygon Area: %2f"%tour_area.polygon_area(P))
+		#print("Area covered: %2f"%tour_area.covered_area(tour, mapping, width/2))
+
+
 
 	#Initialize plotting tools
 	ax = splot.init_axis()

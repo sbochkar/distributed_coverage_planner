@@ -51,7 +51,7 @@ def pretty_print_decomp(decomp):
 
 
 # Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 2
+POLY_ID = 3
 orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment

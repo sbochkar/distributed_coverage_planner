@@ -24,7 +24,7 @@ import single_planner
 from new_funks import pair_wise_reoptimization
 from new_funks import reopt_recursion
 from new_funks import reopt_recursion_BFT
-
+from shapely.geometry import LinearRing
 
 GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
@@ -51,7 +51,7 @@ def pretty_print_decomp(decomp):
 
 
 # Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 5
+POLY_ID = 4
 orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment
@@ -74,11 +74,14 @@ chi_costs_sorted = sorted(chi_costs, key=lambda v:v[1], reverse=True)
 print("[.] Original costs: %s"%chi_costs_sorted)
 
 
+for idx, poly in enumerate(decomp):
+	if not LinearRing(poly[0]).is_simple:
+		print("[!!!!!] WHYWYYWEHWYEEHGW")
+		print idx
 
 
 
-
-M = 2
+M = 0
 iterations = 0
 while iterations < M:
 	iterations += 1
@@ -101,14 +104,17 @@ while iterations < M:
 	adj_matrix = adj.get_adjacency_as_matrix(decomp)
 
 	reopt_recursion.level = 0
-	#reopt_recursion(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map)
+	reopt_recursion(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map)
+	#pretty_print_decomp(decomp)
 
-	q = [chi_costs_sorted[0][0]]
-	reopt_recursion_BFT(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map, q)
-	if DEBUG:
-		pretty_print_decomp(decomp)
+	#q = [chi_costs_sorted[0][0]]
+	#reopt_recursion_BFT(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map, q)
+	#if DEBUG:
 
-
+for idx, poly in enumerate(decomp):
+	if not LinearRing(poly[0]).is_simple:
+		print("[!!!!!] WHYWYYWEHWYEEHGW")
+		print idx
 
 # Print the refined costs
 chi_costs = []
@@ -134,7 +140,9 @@ adj_matrix = adj.get_adjacency_as_matrix(decomp)
 #cost_matrix, cluster_list = dubins_cost.compute_costs(orig_poly, mapping, RADIUS/2)
 #solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
 #tour = solver.read_tour("cpp_test")
-
+#pretty_print_decomp(decomp)
+#print cell_to_site_map
+#cell_to_site_map = {0: (10,10), 1:(0,0), 2:(10,0), 3:(0,10)}
 single_planner.single_planner(decomp, RADIUS, orig_poly, cell_to_site_map)
 
 #Initialize plotting tools

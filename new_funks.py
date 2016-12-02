@@ -9,6 +9,7 @@ import chi
 import reflex
 import cuts
 from shapely.geometry import LineString
+from shapely.geometry import LinearRing
 
 
 DEBUG = []
@@ -201,6 +202,10 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 	#print adj_matrix[cell_a_id][cell_b_id]
 	cell_union = op.union_two_cells(decomposition[cell_a_id], decomposition[cell_b_id],
 									adj_matrix[cell_a_id][cell_b_id])
+
+	if not LinearRing(cell_union[0]).is_simple:
+		return False
+
 	if DEBUG: 
 		print("[..] Cell Union: %s."%cell_union)
 
@@ -220,9 +225,11 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 
 	if reflex_verts:
 		v_e = []
+		v_s_fixed = []
 		#for v_s in [v_s]:
-		for v_s in reflex_verts:
+		for idx, v_s in enumerate(reflex_verts):
 			# Find the cut space from v_s, SHOULD BE STABLE ENOUGH AT THIS POINT
+			#print cell_union
 			cut_space = cuts.find_cut_space(cell_union, v_s, is_reflex=is_reflex)
 			if DEBUG: 
 				print("[..] Cut Space: %s."%cut_space)
@@ -253,13 +260,13 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 				# Quick and dirty method to eliminate edge cases
 				if len(p_r) < 3 or len(p_l) < 3:
 					continue
-
+				
 				# Check if the polygons are self-intersecting
-				if not LineString(p_r).is_simple:
+				if not LinearRing(p_r).is_simple:
 					if DEBUG:
 						print "self intersecting"
 					continue
-				if not LineString(p_l).is_simple:
+				if not LinearRing(p_l).is_simple:
 					if DEBUG:
 						print "self intersecting"
 					continue
@@ -310,6 +317,7 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 				if max(chi_l, chi_r) < max_chi:
 					max_chi = max(chi_l, chi_r)
 					v_e = sample
+					v_s_fixed = v_s[1]
 					min_l_site = l_site
 					min_r_site = r_site
 
@@ -334,6 +342,7 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 
 		# Now start generating all kinds of cuts from v_s to sample
 		v_e = []
+		v_s_fixed = []
 		for sample in samples:
 			cut = (v_s[1], sample)
 			# Check if the cut is valid or not first
@@ -348,11 +357,11 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 				continue
 
 			# Check if the polygons are self-intersecting
-			if not LineString(p_r).is_simple:
+			if not LinearRing(p_r).is_simple:
 				if DEBUG:
 					print "self intersecting"
 				continue
-			if not LineString(p_l).is_simple:
+			if not LinearRing(p_l).is_simple:
 				if DEBUG:
 					print "self intersecting"
 				continue
@@ -403,6 +412,7 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 			if max(chi_l, chi_r) < max_chi:
 				max_chi = max(chi_l, chi_r)
 				v_e = sample
+				v_s_fixed = v_s[1]
 				min_l_site = l_site
 				min_r_site = r_site
 
@@ -410,8 +420,17 @@ def pair_wise_reoptimization(cell_a_id=0, cell_b_id=0,
 
 	# Once the search space has been exhausted check if any cuts were made
 	if v_e:
-		cut = (v_s[1], v_e)
+		#cut = (v_s[1], v_e)
+		cut = (v_s_fixed, v_e)
 		p_l, p_r = cuts.perform_cut(cell_union, cut)
+		# Check if the polygons are self-intersecting
+		if not LinearRing(p_r).is_simple:
+			if DEBUG:
+				print "SANITY CHECKING FAILED. RIGHT"
+		if not LinearRing(p_l).is_simple:
+			if DEBUG:
+				print "SANITY CHECKING FAILED, LEFT"
+
 
 		# Except the sites might change, so I need to do it smartly unfortenately
 		decomposition[cell_a_id] = [p_l, []]

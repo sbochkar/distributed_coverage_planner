@@ -109,7 +109,10 @@ def find_optimal_cut(P, v):
 		p_l, p_r = perform_cut(P, [v[1], cut_point])
 		if p_l is None and p_r is None:
 			continue
-
+		if not LineString(p_l).is_simple:
+			continue
+		if not LineString(p_r).is_simple:
+			continue
 
 		dirs_left = directions.get_directions_set([p_l, []])
 		dirs_right = directions.get_directions_set([p_r, []])
@@ -135,6 +138,10 @@ def find_optimal_cut(P, v):
 	for case in pois:
 		p_l, p_r = perform_cut(P, [v[1], case[0]])
 		if p_l is None and p_r is None:
+			continue
+		if not LineString(p_l).is_simple:
+			continue
+		if not LineString(p_r).is_simple:
 			continue
 		a_l = alt.get_altitude([p_l, []], case[1])
 		a_r = alt.get_altitude([p_r, []], case[2])

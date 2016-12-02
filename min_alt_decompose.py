@@ -258,6 +258,9 @@ def decompose(P):
 	#D = recursive_cuts(P_fused)
 	recursive_cuts.list_of_polygons = []
 	recursive_cuts(P_fused)
+	#recursive_cuts(P)
+
+
 	#print("List of polygons after recursion: %s"%(list_of_polygons,))
 
 	# Need a smarter way of doing this
@@ -279,13 +282,19 @@ def recursive_cuts(P):
 	while R:
 		v = R.pop()
 
+		if not LineString(P[0]).is_simple:
+			continue
+
 		cut = cuts.find_optimal_cut(P, v)
 		#print("Ref: %s"%(v[1],))
 		#print("Cut: %s"%(cut,))
 
 		if cut and cut is not None: # Not empty
 			p_l, p_r = cuts.perform_cut(P, [v[1], cut[0]])
-
+			if not LineString(p_l).is_simple:
+				continue
+			if not LineString(p_r).is_simple:
+				continue
 			#return [recursive_cuts([p_l,[]]), recursive_cuts([p_r,[]])]
 			recursive_cuts([p_l,[]])
 			recursive_cuts([p_r,[]])

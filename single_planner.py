@@ -9,6 +9,8 @@ import min_alt_decompose
 import classes
 import tour_length
 import tour_area
+from shapely.geometry import LineString
+
 
 GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
 
@@ -28,6 +30,9 @@ def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
 
 		#single_decomp = greedy_decompose.decompose(region)
 		#single_decomp = min_alt_decompose.decompose(region)
+		if not LineString(region[0]).is_simple:
+			print("[!!] Passing a polygon that is self intersecting.")
+			
 		single_decomposition_list.append(min_alt_decompose.decompose(region))
 		#adjacency_matrix = adjacency.get_adjacency_as_matrix(single_decomposition_list[-1])
 		adj_matrix_list.append(adjacency.get_adjacency_as_matrix(single_decomposition_list[-1]))
@@ -55,8 +60,8 @@ def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
 	for idx, region in enumerate(decomp):
 		splot.plot_polygon_outline(ax, region, idx)
 		splot.plot_decomposition(ax, single_decomposition_list[idx], adj_matrix_list[idx], region)
-		#splot.plot_samples(ax, segment_list[idx], idx)
-		#splot.plot_tour_dubins(ax, tours[idx], map_list[idx], radius/2, idx)
+		splot.plot_samples(ax, segment_list[idx], idx)
+		splot.plot_tour_dubins(ax, tours[idx], map_list[idx], radius/2, idx)
 
 	sites = [points for idx, points in cell_to_site_map.items()]
 	splot.plot_main_polygon(ax, orig_poly)

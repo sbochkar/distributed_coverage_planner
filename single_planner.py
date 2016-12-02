@@ -55,12 +55,12 @@ def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
 	for idx, region in enumerate(decomp):
 		splot.plot_polygon_outline(ax, region, idx)
 		splot.plot_decomposition(ax, single_decomposition_list[idx], adj_matrix_list[idx], region)
-		splot.plot_samples(ax, segment_list[idx], idx)
-		splot.plot_tour_dubins(ax, tours[idx], map_list[idx], radius/2, idx)
+		#splot.plot_samples(ax, segment_list[idx], idx)
+		#splot.plot_tour_dubins(ax, tours[idx], map_list[idx], radius/2, idx)
 
 	sites = [points for idx, points in cell_to_site_map.items()]
 	splot.plot_main_polygon(ax, orig_poly)
-	splot.plot_init_poss_and_assignment(ax, sites, cell_to_site_map, decomp)
+	#splot.plot_init_poss_and_assignment(ax, sites, cell_to_site_map, decomp)
 	splot.display()
 
 

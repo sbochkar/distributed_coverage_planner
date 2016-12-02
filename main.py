@@ -32,7 +32,7 @@ DEBUG = []
 NUM_SAMPLES = 10
 RADIUS = 0.2
 LIN_PENALTY = 1.0
-ANGULAR_PENALTY = 1.0/360
+ANGULAR_PENALTY = 10*1.0/360
 
 
 
@@ -51,7 +51,7 @@ def pretty_print_decomp(decomp):
 
 
 # Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 4
+POLY_ID = 5
 orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment
@@ -78,7 +78,7 @@ print("[.] Original costs: %s"%chi_costs_sorted)
 
 
 
-M = 40
+M = 2
 iterations = 0
 while iterations < M:
 	iterations += 1

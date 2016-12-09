@@ -56,6 +56,13 @@ def plot_polygon_outline(ax, polygon, fc_idx=0):
 	#patch = PolygonPatch(P, alpha=0.2, fc=colors[fc_idx], ec='black', linewidth=3, linestyle='dashed',zorder=2) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
 	patch = PolygonPatch(P, alpha=0.2, fc=colors[fc_idx], ec='black', linewidth=3, linestyle='dashed',zorder=2, fill=False) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
 	ax.add_patch(patch)
+
+	#poly_shp = Polygon(*polygon)
+	#centroid = poly_shp.centroid
+	#ax.annotate(fc_idx, (centroid.x, centroid.y))
+
+
+
 	#x, y= P.xy
 	#ax.plot(x,y)
 	ax.set_xlim([min_x-0.5,max_x+0.5])

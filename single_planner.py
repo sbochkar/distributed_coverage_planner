@@ -12,7 +12,7 @@ import tour_area
 from shapely.geometry import LineString
 
 
-GLKH_LOCATION = "/home/stan/misc/GLKH-1.0/"
+GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
 
 
 def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
@@ -32,21 +32,30 @@ def single_planner(decomp, radius=1.0, orig_poly=[], cell_to_site_map=[]):
 		#single_decomp = min_alt_decompose.decompose(region)
 		if not LineString(region[0]).is_simple:
 			print("[!!] Passing a polygon that is self intersecting.")
-			
+		print("[..] Before the min alt decomposition.")	
+		print region
 		single_decomposition_list.append(min_alt_decompose.decompose(region))
+		print("[..] Finished min alt decomposition.")
 		#adjacency_matrix = adjacency.get_adjacency_as_matrix(single_decomposition_list[-1])
 		adj_matrix_list.append(adjacency.get_adjacency_as_matrix(single_decomposition_list[-1]))
+		print("[..] Computed the adjacency list.")
 
 
 		segments = discrt.discritize_set(single_decomposition_list[-1], radius)
+		print("[..] Finished discritization of the space.")
 		segments.append(classes.PointSegment((cell_to_site_map[idx])))
+
 		segment_list.append(segments)
 		#mapping = get_mapping.get_mapping(segments)
 		map_list.append(get_mapping.get_mapping(segment_list[-1]))
+		print("[..] Generated sampling map.")
 		cost_matrix, cluster_list = dubins_cost.compute_costs(region, map_list[-1], radius/2, orig_poly)
+		print("[..] Computed cost of samples.")
 		solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
+		print("[..] Finished solving GTSP.")
 		#tour = solver.read_tour("cpp_test")
 		tours.append(solver.read_tour("cpp_test"))
+		print("[..] Finished reading the tour.")
 
 		print("Tour Length %2f."%tour_length.length(tours[-1], segments, cost_matrix))
 		#splot.display()

@@ -51,7 +51,7 @@ def pretty_print_decomp(decomp):
 
 
 # Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 7
+POLY_ID = 9
 orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment
@@ -81,7 +81,7 @@ for idx, poly in enumerate(decomp):
 
 
 
-M = 20
+M = 75
 iterations = 0
 while iterations < M:
 	iterations += 1
@@ -99,7 +99,7 @@ while iterations < M:
 		print("[.] Old costs: %s"%chi_costs_sorted)
 
 	# Begin the recursion process
-	mad.collinear_correction(decomp)
+	#mad.collinear_correction(decomp)
 	mad.post_processs_decomposition(decomp)
 	adj_matrix = adj.get_adjacency_as_matrix(decomp)
 
@@ -125,8 +125,9 @@ for idx, poly in enumerate(decomp):
 					radius=RADIUS, lin_penalty=LIN_PENALTY,
 					angular_penalty=ANGULAR_PENALTY)
 	chi_costs.append((idx, cost))
-chi_costs_sorted = sorted(chi_costs, key=lambda v:v[1], reverse=True)
-print("[.] New costs: %s"%chi_costs_sorted)
+#chi_costs_sorted = sorted(chi_costs, key=lambda v:v[1], reverse=True)
+#print("[.] New costs: %s"%chi_costs_sorted)
+print("[.] New costs: %s"%chi_costs)
 
 
 

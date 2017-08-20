@@ -1,29 +1,200 @@
 from shapely.geometry import Point
+from shapely.geometry import MultiPoint
 from shapely.geometry import Polygon
 from shapely.geometry import LineString
+from shapely.geometry import MultiLineString
+from shapely.geometry import LinearRing
 
 
-# Arbitrarily small epsilon for buffer operations
-BUFFER_EPS = 10e-06
+def pretty_print_poly(P=[]):
+	"""Pretty prints cannonical polygons to help with debugging
+
+	Args:
+		P: Polygon in canonical form.
+
+	Returns:
+		None
+	"""
+
+	print("Polygon:\n\tExterior:\n\t\t"),
+
+	for pts in P[0]:
+		# Need to make sure to round some pts for nice display
+		print("(%3.1f, %3.1f), "%(pts[0], pts[1])),
+	print("")
+	holeCnt = 0
+	for hole in P[1]:
+		print("\tHole %d:\n\t\t"%holeCnt),
+		for pts in hole:
+			# Need to make sure to round some pts for nice display
+			print("(%3.1f, %3.1f),"%(pts[0], pts[1])),
+		print("")
+		holeCnt += 1
 
 
-def polygon_split(polygon=[], split_line=[]):
-	"""Split a polygon into two other polygons along split_line
+def inputs_valid(polygon=[], splitLine=[]):
+	""" Quick function to check validity of inputs
 
-	Attempts to split a polygon into two other polygons. Here, a number of
-	assumptions has to be made. That is, that split_line is a proper line
-	connecting 	boundaries of a polygon. Also, that split_line does not connect
-	outside boundary to a boundary of hole. This is a undefined behaviour.
+	Perform a variety of checks to make sure we only admit valid inputs.
+	This is mainly to ensure as much robsutness as possible. In the past, not
+	having these checks have lead to a number of problems.
 
-	Unforunately, this split is destructive due to the nature of Shapely. That
-	is the two 
 	Args:
 		polygon: Polygon in the form of [ [], [[],...] ] where polygon[0] is
 			the exterior boundary of the polygon and polygon[1] is the list
 			of boundaries of holes.
 			Exterior boundary must be in ccw order. Last point != first point.
 			Same for hole boundaries.
-		split_line: A line along which to split polygon into two. A list of 2
+		splitLine: A line along which to split polygon into two. A list of 2
+			tuples specifying coordinates of straight line
+
+	Returns:
+		True: If inputs are valid. Useful constructs otherwise.
+	"""
+
+
+	global DEBUG_LEVEL
+
+	# We are very much interesting in rebustness, so performing sanity checks.
+	if not splitLine:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested on an empty split line.")
+
+		return False
+
+	if len(splitLine) != 2:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested on an split line with wrong number \
+										 of coordinates.")
+
+		return False
+
+	if not polygon or len(polygon) != 2:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested on a polygon of wrong format.")
+
+		return False
+
+
+	extr, holes = polygon
+
+	if not extr:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested on a polygon with empty exterior.")
+
+		return False
+
+	pPol = Polygon(*polygon)
+
+	if not pPol.is_valid:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested on an invalid polygon.")
+
+		return False
+
+	return True
+
+
+def parameters_valid(common_pts=[], holes=[], splitLineLS=[]):
+	""" Quick function to check validity of some interim variable of the algo
+
+	Perform a variety of checks to make sure we only admit valid inputs.
+	This is mainly to ensure as much robsutness as possible. In the past, not
+	having these checks have lead to a number of problems.
+
+	Args:
+		common_pts: Points resulted in intersection of split line and boundary.
+			Should be MultiPoint object.
+		holes: Hole boundaries of the original polygon.
+		splitLineLS: LineString object representing the split line.
+
+	Returns:
+		True: If paramters are valid. False otherwise.
+	"""
+
+	if not common_pts:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested but split line is within a polygon.")
+
+		return False
+
+	if type(common_pts) is not MultiPoint:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested but split line is not valid.")
+
+		return False
+
+	if len(common_pts) > 2:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested but split line crosses many times.")
+
+		return False
+
+	for hole in holes:
+		holeLS = LinearRing(hole)
+
+		if splitLineLS.intersects(holeLS):
+			if DEBUG_LEVEL & 0x04:
+				print("Polygon split requested but split line crosses a hole.")
+
+			return False
+
+	return True
+
+
+def convert_to_canonical(P=[]):
+	"""Convertion function to convert from shapely object to canonical form.
+
+	Args:
+		P: Shapely object representing a polygon.
+
+	Returns:
+		poly: A polygon represented in canonical form. [] otherwise.
+	"""
+
+	if type(P) is not Polygon:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon conversion requested but wrong input specified.")
+
+			return []
+
+	poly = [[], []]
+
+	if not LinearRing(P.exterior.coords).is_ccw:
+		poly[0] = list(P.exterior.coords)[::-1][:-1]
+	else:
+		poly[0] = list(P.exterior.coords)[:-1]
+
+	for hole in P.interiors:
+
+		if LinearRing(hole.coords).is_ccw:
+			poly[1].append(list(hole.coords)[::-1][:-1])
+		else:
+			poly[1].append(list(hole.coords)[:-1])
+
+	return poly
+
+
+def polygon_split(polygon=[], splitLine=[]):
+	"""Split a polygon into two other polygons along splitLine.
+
+	Attempts to split a polygon into two other polygons. Here, a number of
+	assumptions has to be made. That is, that splitLine is a proper line
+	connecting 	boundaries of a polygon. Also, that splitLine does not connect
+	outside boundary to a boundary of hole. This is a undefined behaviour.
+
+	TODO: With current implementation, it may be possible to do non-decomposing
+		cuts. But, some thought needs to be put in.
+	TODO: Consider returning Shapely objects instead of converting them to
+		canonical form. Will improve cycle efficiency.
+
+	Args:
+		polygon: Polygon in the form of [ [], [[],...] ] where polygon[0] is
+			the exterior boundary of the polygon and polygon[1] is the list
+			of boundaries of holes.
+			Exterior boundary must be in ccw order. Last point != first point.
+			Same for hole boundaries.
+		splitLine: A line along which to split polygon into two. A list of 2
 			tuples specifying coordinates of straight line
 
 	Returns:
@@ -35,202 +206,42 @@ def polygon_split(polygon=[], split_line=[]):
 
 	global DEBUG_LEVEL
 
-	# We are very much interesting in rebustness, so performing sanity checks.
-	if not split_line:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on an empty split line.")
 
+	if not inputs_valid(polygon, splitLine):
 		return []
-
-	if len(split_line) != 2:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on an split line with wrong number of coordinates.")
-
-		return []
-
-
-	if not polygon or len(polygon) != 2:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on a polygon of wrong format.")
-
-		return []
-
 
 	extr, holes = polygon
-	if not extr:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on a polygon with empty exterior.")
-
-		return []
-
 	pPol = Polygon(*polygon)
-	if not pPol.is_valid:
+
+	splitLineLS = LineString(splitLine)
+	extrLineLR = LinearRing(extr)
+
+	# This calculates the points on the boundary where the split will happen.
+	common_pts = extrLineLR.intersection(splitLineLS)
+
+	if not parameters_valid(common_pts, holes, splitLineLS):
+		return []
+
+	splitBoundary = extrLineLR.difference(splitLineLS)
+
+	# Sanity check to make sure we get the right result
+	if type(splitBoundary) is not MultiLineString and len(splitBoundary) != 2:
 		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on an invalid polygon.")
+			print("Polygon split requested but boundary split is invalid.")
 
 		return []
 
-	# Shapely doesn't support set operations between objects of different
-	#	dimensionality. Hence, artificially inflate line.
-	# Cap and join style are ROUND
-	splitLineLS = LineString(split_line)
-	splitLinePol = splitLineLS.buffer(BUFFER_EPS, cap_style=1, join_style=1)
+	mask1 = Polygon(splitBoundary[0])
+	mask2 = Polygon(splitBoundary[1])
 
+	resP1Pol = pPol.intersection(mask1)
+	resP2Pol = pPol.intersection(mask2)
 
-	diff = pPol.difference(splitLinePol)
+	# The results of the intersection are Shapely objects. Convert them to list.
+	resP1 = convert_to_canonical(resP1Pol)
+	resP2 = convert_to_canonical(resP2Pol)
 
-	return diff
-
-
-
-
-	#print("Cut edge: %s"%(e,))
-	v = e[0]
-	w = e[1]
-	chain = LineString(P[0]+[P[0][0]])
-	#print("Chain to be cut: %s"%(chain,))
-	#print("Chain length: %7f"%chain.length)
-
-	distance_to_v = chain.project(Point(v))
-	distance_to_w = chain.project(Point(w))
-	if distance_to_v == 0.0 and distance_to_w == 0.0:
-		return (None,None)
-	if distance_to_v == distance_to_w:
-		return (None,None)
-
-	#print("D_to_w: %7f, D_to_v: %2f"%(distance_to_w, distance_to_v))
-
-	if distance_to_w > distance_to_v:
-		if round(distance_to_w, 4) >= round(chain.length, 4):
-	#		print("Special case")
-			distance_to_v = chain.project(Point(v))
-			left_chain, right_chain = cut(chain, distance_to_v)
-
-			p_l = left_chain.coords[:]
-			if right_chain:
-				p_r = right_chain.coords[:]
-			else:
-				p_r = []
-		else:
-			if distance_to_v == 0:
-				distance_to_w = chain.project(Point(w))
-				right_chain, remaining = cut(chain, distance_to_w)
-
-				p_l = remaining.coords[:]
-				p_r = right_chain.coords[:]	
-			else:
-				cut_v_1, cut_v_2 = cut(chain, distance_to_v)
-
-				distance_to_w = cut_v_2.project(Point(w))
-				right_chain, remaining = cut(cut_v_2, distance_to_w)
-
-				p_l = cut_v_1.coords[:]+remaining.coords[:-1]
-				p_r = right_chain.coords[:]
-
-	else:
-		if round(distance_to_v, 4) >= round(chain.length, 4):
-	#		print("Special case")
-			distance_to_w = chain.project(Point(w))
-			right_chain, remaining = cut(chain, distance_to_w)
-
-			p_l = remaining.coords[:]
-			p_r = right_chain.coords[:]			
-		else:
-			if distance_to_w == 0:
-				distance_to_v = chain.project(Point(v))
-				right_chain, remaining = cut(chain, distance_to_v)
-
-				p_l = remaining.coords[:]
-				p_r = right_chain.coords[:]		
-			else:
-	#			print "here"
-				#print chain
-				cut_v_1, cut_v_2 = cut(chain, distance_to_w)
-				#print("Cut1: %s"%cut_v_1)
-				#print("Cut2: %s"%cut_v_2)
-
-
-				distance_to_v = cut_v_2.project(Point(v))
-	#			print("Dist: %2f. Length: %2f"%(distance_to_v, cut_v_2.length) )
-				right_chain, remaining = cut(cut_v_2, distance_to_v)
-	#			print remaining.coords[:]
-				p_l = cut_v_1.coords[:]+remaining.coords[:-1]
-				p_r = right_chain.coords[:]
-	#			p_l = right_chain.coords[:] 
-	#			p_r = remaining.coords[:]+cut_v_1.coords[:]
-	#			print p_l, p_r
-
-	return p_l, p_r
-
-
-def cut(line, distance):
-	"""Fetches rows from a Bigtable.
-
-	Retrieves rows pertaining to the given keys from the Table instance
-	represented by big_table.  Silly things may happen if
-	other_silly_variable is not None.
-
-	Args:
-		big_table: An open Bigtable Table instance.
-		keys: A sequence of strings representing the key of each table row
-			to fetch.
-		other_silly_variable: Another optional variable, that has a much
-			longer name than the other args, and which does nothing.
-
-	Returns:
-		A dict mapping keys to the corresponding table row data
-		fetched. Each row is represented as a tuple of strings. For
-		example:
-
-		{'Serak': ('Rigel VII', 'Preparer'),
-		'Zim': ('Irk', 'Invader'),
-		'Lrrr': ('Omicron Persei 8', 'Emperor')}
-
-		If a key from the keys argument is missing from the dictionary,
-		then that row was not found in the table.
-
-	Raises:
-		IOError: An error occurred accessing the bigtable.Table object.
-	"""
-
-
-	# Cuts a line in two at a distance from its starting point
-	if distance <= 0.0 or distance >= line.length:
-		print("ERROR: CUT BEYOND LENGTH")
-		print line
-		print(distance)
-		return [LineString(line), []]
-
-	coords = list(line.coords)
-	#print("Coords: %s"%(coords,))
-	pd = 0
-	#for i, p in enumerate(coords):
-	for i in range(len(coords)):
-		if i > 0:
-			pd = LineString(coords[:i+1]).length
-		#print i,coords[:i+1]
-		#pd = line.project(Point(p))
-		#print pd
-		if pd == distance:
-			return [
-				LineString(coords[:i+1]),
-				LineString(coords[i:])]
-		if pd > distance:
-			#print("This case")
-			cp = line.interpolate(distance)
-			#print("cp: %s"%(cp,))
-			return [
-				LineString(coords[:i] + [(cp.x, cp.y)]),
-				LineString([(cp.x, cp.y)] + coords[i:])]
-		if i == len(coords)-1:
-			cp = line.interpolate(distance)
-			return [
-				LineString(coords[:i] + [(cp.x, cp.y)]),
-				LineString([(cp.x, cp.y)] + coords[i:])]
-
-
-
-
+	return resP1, resP2
 
 
 if __name__ == '__main__':
@@ -241,63 +252,64 @@ if __name__ == '__main__':
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	e = [(0, 0), (1, 1)]
 
-	result = polygon_split([], e)
-	if not result:
-		print("[PASSED] Empty P test.")
-	else:
-		print("[FAILED] Empty P test.")
+	result = "PASS" if not polygon_split([], e) else "FAIL"
+	print("[%s] Empty P test."%result)
 
-	result = polygon_split([[]], e)
-	if not result:
-		print("[PASSED] Wrong P format test.")
-	else:
-		print("[FAILED] Wrong P format test.")
+	result = "PASS" if not polygon_split([[]], e) else "FAIL"
+	print("[%s] Wrong P format test."%result)
 
-	result = polygon_split(P, [])
-	if not result:
-		print("[PASSED] Empty e test.")
-	else:
-		print("[FAILED] Empty e test.")
+	result = "PASS" if not polygon_split(P, []) else "FAIL"
+	print("[%s] Empty e test."%result)
 
-	result = polygon_split([[], [1, 2, 3]], e)
-	if not result:
-		print("[PASSED] Empty exterior of P test.")
-	else:
-		print("[FAILED] Empty exterior of P test.")
+	result = "PASS" if not polygon_split([[], [1, 2, 3]], e) else "FAIL"
+	print("[%s] Empty exterior of P test."%result)
 
-	result = polygon_split(P, [(0, 0)])
-	if not result:
-		print("[PASSED] Split line with one coordinate.")
-	else:
-		print("[FAILED] Split line with one coordinate.")
+	result = "PASS" if not polygon_split(P, [(0, 0)]) else "FAIL"
+	print("[%s] Split line with one coordinate."%result)
 
-	result = polygon_split(P, [(0, 0), (1, 1), (0, 1)])
-	if not result:
-		print("[PASSED] Split line with one coordinate.")
-	else:
-		print("[FAILED] Split line with 3 coordinates.")
+	result = "PASS" if not polygon_split(P, [(0, 0), (1, 1), (0, 1)]) else "FAIL"
+	print("[%s] Split line with 3 coordinate."%result)
 
-	result = polygon_split([[(0, 0), (1, 0), (1, 1), (0.1, -0.1)], []], e)
-	if not result:
-		print("[PASSED] Invalid polygon test.")
-	else:
-		print("[FAILED] Invalid polygon test.")
+	result = "PASS" if not polygon_split([[(0, 0), (1, 0), (1, 1), (0.1, -0.1)], []], e) else "FAIL"
+	print("[%s] Invalid polygon test."%result)
 
-	result = polygon_split(P, e)
-	if result:
-		print("[PASSED] Simple polygon cut test.")
-	else:
-		print("[FAILED] Simple polygon cut test..")
+	result = "PASS" if not polygon_split(P, [(0.1, 0.1), (0.9, 0.9)]) else "FAIL"
+	print("[%s] Cut entirely within polygon."%result)
 
+	result = "PASS" if not polygon_split(P, [(0, 0), (0.9, 0.9)]) else "FAIL"
+	print("[%s] Split line touches boundary at one point."%result)
 
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.25, 0.25), (0.25, 0.75), (0.75, 0.75), (0.75, 0.25)]]]
-	e = [(0, 0), (1, 1)]
-	result = polygon_split(P, e)
-	if result:
-		print("[PASSED] Simple polygon cut test.")
-	else:
-		print("[FAILED] Simple polygon cut test..")
+	result = "PASS" if not polygon_split(P, [(0, 0), (0, 1)]) else "FAIL"
+	print("[%s] Split line is along a boundary."%result)
 
-#	P1, P2 = result
-#	print P1
-#	print P2
+	P = [[(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)], []]
+	e = [(0.5, 0), (0.5, 1)]
+	result = "PASS" if not polygon_split(P, e) else "FAIL"
+	print("[%s] Split line crosses more than 2 points."%result)
+
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.2, 0.2),
+											 (0.2, 0.8),
+											 (0.8, 0.8),
+											 (0.8, 0.2)]]]
+	e = [(0.2, 0), (0.2, 1)]
+	result = "PASS" if not  polygon_split(P, e) else "FAIL"
+	print("[%s] Split line crosses a hole."%result)
+
+	# Now, do actual functional tests
+	P = [[(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)],
+			[[(0.1, 0.1), (0.1, 0.2), (0.2, 0.1)],
+			 [(0.9, 0.9), (0.9, 0.8), (0.8, 0.8)]]]
+	e = [(0, 0), (0.2, 0.8)]
+	P1, P2 = polygon_split(P, e)
+	result = "PASS"
+	if set(P1[0]) != set([(1.0, 0.0), (1.0, 1.0), (0.8, 1.0), (0.2, 0.8), (0.0, 0.0)]):
+		result = "FAIL"
+	if set(P1[1][0]) != set([(0.1, 0.1), (0.1, 0.2), (0.2, 0.1)]):
+		result = "FAIL"
+	if set(P1[1][1]) != set([(0.9, 0.9), (0.9, 0.8), (0.8, 0.8)]):
+		result = "FAIL"
+	if set(P2[0]) != set([(0.5, 1.0),  (0.0, 1.0),  (0.0, 0.0),  (0.2, 0.8)]):
+		result = "FAIL"
+	print("[%s] Simple valid split test."%result)
+
+	pretty_print_poly(P2)

@@ -1,6 +1,9 @@
 from shapely.geometry import Point
+from shapely.geometry import MultiPoint
 from shapely.geometry import Polygon
 from shapely.geometry import LineString
+from shapely.geometry import MultiLineString
+from shapely.geometry import LinearRing
 
 
 # Arbitrarily small epsilon for buffer operations
@@ -15,8 +18,9 @@ def polygon_split(polygon=[], split_line=[]):
 	connecting 	boundaries of a polygon. Also, that split_line does not connect
 	outside boundary to a boundary of hole. This is a undefined behaviour.
 
-	Unforunately, this split is destructive due to the nature of Shapely. That
-	is the two 
+	TODO: With current implementation, it may be possible to do non-decomposing
+		cuts. But, some work needs to be put in to it. For now, it's underfined.
+
 	Args:
 		polygon: Polygon in the form of [ [], [[],...] ] where polygon[0] is
 			the exterior boundary of the polygon and polygon[1] is the list
@@ -44,7 +48,8 @@ def polygon_split(polygon=[], split_line=[]):
 
 	if len(split_line) != 2:
 		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on an split line with wrong number of coordinates.")
+			print("Polygon split requested on an split line with wrong number \
+										 of coordinates.")
 
 		return []
 
@@ -70,167 +75,53 @@ def polygon_split(polygon=[], split_line=[]):
 
 		return []
 
-	# Shapely doesn't support set operations between objects of different
-	#	dimensionality. Hence, artificially inflate line.
-	# Cap and join style are ROUND
+
 	splitLineLS = LineString(split_line)
-	splitLinePol = splitLineLS.buffer(BUFFER_EPS, cap_style=1, join_style=1)
+	extrLineLR = LinearRing(extr)
 
+	common_pts = extrLineLR.intersection(splitLineLS)
 
-	diff = pPol.difference(splitLinePol)
+	if not common_pts:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested but split line is within a polygon.")
 
-	return diff
+		return []
 
+	if type(common_pts) is not MultiPoint:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested but split line is not valid.")
 
+		return []
 
+	if len(common_pts) > 2:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested but split line crosses many times.")
 
-	#print("Cut edge: %s"%(e,))
-	v = e[0]
-	w = e[1]
-	chain = LineString(P[0]+[P[0][0]])
-	#print("Chain to be cut: %s"%(chain,))
-	#print("Chain length: %7f"%chain.length)
+		return []
 
-	distance_to_v = chain.project(Point(v))
-	distance_to_w = chain.project(Point(w))
-	if distance_to_v == 0.0 and distance_to_w == 0.0:
-		return (None,None)
-	if distance_to_v == distance_to_w:
-		return (None,None)
+	for hole in holes:
+		holeLS = LinearRing(hole)
 
-	#print("D_to_w: %7f, D_to_v: %2f"%(distance_to_w, distance_to_v))
+		if splitLineLS.intersects(holeLS):
+			if DEBUG_LEVEL & 0x04:
+				print("Polygon split requested but split line crosses a hole.")
 
-	if distance_to_w > distance_to_v:
-		if round(distance_to_w, 4) >= round(chain.length, 4):
-	#		print("Special case")
-			distance_to_v = chain.project(Point(v))
-			left_chain, right_chain = cut(chain, distance_to_v)
+			return []
 
-			p_l = left_chain.coords[:]
-			if right_chain:
-				p_r = right_chain.coords[:]
-			else:
-				p_r = []
-		else:
-			if distance_to_v == 0:
-				distance_to_w = chain.project(Point(w))
-				right_chain, remaining = cut(chain, distance_to_w)
+	splitBoundary = extrLineLR.difference(splitLineLS)
+	if type(splitBoundary) is not MultiLineString and len(splitBoundary) != 2:
+		if DEBUG_LEVEL & 0x04:
+			print("Polygon split requested but boundary split is invalid.")
 
-				p_l = remaining.coords[:]
-				p_r = right_chain.coords[:]	
-			else:
-				cut_v_1, cut_v_2 = cut(chain, distance_to_v)
+		return []
 
-				distance_to_w = cut_v_2.project(Point(w))
-				right_chain, remaining = cut(cut_v_2, distance_to_w)
+	mask1 = Polygon(splitBoundary[0])
+	mask2 = Polygon(splitBoundary[1])
 
-				p_l = cut_v_1.coords[:]+remaining.coords[:-1]
-				p_r = right_chain.coords[:]
+	res_P1 = pPol.intersection(mask1)
+	res_P2 = pPol.intersection(mask2)
 
-	else:
-		if round(distance_to_v, 4) >= round(chain.length, 4):
-	#		print("Special case")
-			distance_to_w = chain.project(Point(w))
-			right_chain, remaining = cut(chain, distance_to_w)
-
-			p_l = remaining.coords[:]
-			p_r = right_chain.coords[:]			
-		else:
-			if distance_to_w == 0:
-				distance_to_v = chain.project(Point(v))
-				right_chain, remaining = cut(chain, distance_to_v)
-
-				p_l = remaining.coords[:]
-				p_r = right_chain.coords[:]		
-			else:
-	#			print "here"
-				#print chain
-				cut_v_1, cut_v_2 = cut(chain, distance_to_w)
-				#print("Cut1: %s"%cut_v_1)
-				#print("Cut2: %s"%cut_v_2)
-
-
-				distance_to_v = cut_v_2.project(Point(v))
-	#			print("Dist: %2f. Length: %2f"%(distance_to_v, cut_v_2.length) )
-				right_chain, remaining = cut(cut_v_2, distance_to_v)
-	#			print remaining.coords[:]
-				p_l = cut_v_1.coords[:]+remaining.coords[:-1]
-				p_r = right_chain.coords[:]
-	#			p_l = right_chain.coords[:] 
-	#			p_r = remaining.coords[:]+cut_v_1.coords[:]
-	#			print p_l, p_r
-
-	return p_l, p_r
-
-
-def cut(line, distance):
-	"""Fetches rows from a Bigtable.
-
-	Retrieves rows pertaining to the given keys from the Table instance
-	represented by big_table.  Silly things may happen if
-	other_silly_variable is not None.
-
-	Args:
-		big_table: An open Bigtable Table instance.
-		keys: A sequence of strings representing the key of each table row
-			to fetch.
-		other_silly_variable: Another optional variable, that has a much
-			longer name than the other args, and which does nothing.
-
-	Returns:
-		A dict mapping keys to the corresponding table row data
-		fetched. Each row is represented as a tuple of strings. For
-		example:
-
-		{'Serak': ('Rigel VII', 'Preparer'),
-		'Zim': ('Irk', 'Invader'),
-		'Lrrr': ('Omicron Persei 8', 'Emperor')}
-
-		If a key from the keys argument is missing from the dictionary,
-		then that row was not found in the table.
-
-	Raises:
-		IOError: An error occurred accessing the bigtable.Table object.
-	"""
-
-
-	# Cuts a line in two at a distance from its starting point
-	if distance <= 0.0 or distance >= line.length:
-		print("ERROR: CUT BEYOND LENGTH")
-		print line
-		print(distance)
-		return [LineString(line), []]
-
-	coords = list(line.coords)
-	#print("Coords: %s"%(coords,))
-	pd = 0
-	#for i, p in enumerate(coords):
-	for i in range(len(coords)):
-		if i > 0:
-			pd = LineString(coords[:i+1]).length
-		#print i,coords[:i+1]
-		#pd = line.project(Point(p))
-		#print pd
-		if pd == distance:
-			return [
-				LineString(coords[:i+1]),
-				LineString(coords[i:])]
-		if pd > distance:
-			#print("This case")
-			cp = line.interpolate(distance)
-			#print("cp: %s"%(cp,))
-			return [
-				LineString(coords[:i] + [(cp.x, cp.y)]),
-				LineString([(cp.x, cp.y)] + coords[i:])]
-		if i == len(coords)-1:
-			cp = line.interpolate(distance)
-			return [
-				LineString(coords[:i] + [(cp.x, cp.y)]),
-				LineString([(cp.x, cp.y)] + coords[i:])]
-
-
-
-
+	return res_P1, res_P2
 
 
 if __name__ == '__main__':
@@ -283,21 +174,52 @@ if __name__ == '__main__':
 	else:
 		print("[FAILED] Invalid polygon test.")
 
-	result = polygon_split(P, e)
-	if result:
-		print("[PASSED] Simple polygon cut test.")
+	result = polygon_split(P, [(0.1, 0.1), (0.9, 0.9)])
+	if not result:
+		print("[PASSED] Cut entirely within polygon.")
 	else:
-		print("[FAILED] Simple polygon cut test..")
+		print("[FAILED] Cut entirely within polygon.")
+
+	result = polygon_split(P, [(0, 0), (0.9, 0.9)])
+	if not result:
+		print("[PASSED] Split line touches boundary at one point.")
+	else:
+		print("[FAILED] Split line touches boundary at one point.")
+
+	result = polygon_split(P, [(0, 0), (0, 1)])
+	if not result:
+		print("[PASSED] Split line is along a boundary.")
+	else:
+		print("[FAILED] Split line is along a boundary.")
+
+	P = [[(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)], []]
+	e = [(0.5, 0), (0.5, 1)]
+	result =  polygon_split(P, e)
+	if not result:
+		print("[PASSED] Split line crosses more than 2 points.")
+	else:
+		print("[FAILED] Split line crosses more than 2 points.")
+
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.2, 0.2),
+											 (0.2, 0.8),
+											 (0.8, 0.8),
+											 (0.8, 0.2)]]]
+	e = [(0.2, 0), (0.2, 1)]
+	result =  polygon_split(P, e)
+	if not result:
+		print("[PASSED] Split line crosses a hole.")
+	else:
+		print("[FAILED] Split line crosses a hole.")
+
+	# Now, do actual functional tests
+
+
+
+	P = [[(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)],
+			[[(0.1, 0.1), (0.1, 0.2), (0.2, 0.1)],
+			 [(0.9, 0.9), (0.9, 0.8), (0.8, 0.8)]]]
+	e = [(0, 0), (0.2, 0.8)]
+	print(polygon_split(P, e))
 
 
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.25, 0.25), (0.25, 0.75), (0.75, 0.75), (0.75, 0.25)]]]
-	e = [(0, 0), (1, 1)]
-	result = polygon_split(P, e)
-	if result:
-		print("[PASSED] Simple polygon cut test.")
-	else:
-		print("[FAILED] Simple polygon cut test..")
-
-#	P1, P2 = result
-#	print P1
-#	print P2

@@ -64,8 +64,8 @@ def inputs_valid(polygon=[], splitLine=[]):
 
 	if len(splitLine) != 2:
 		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on an split line with wrong number \
-										 of coordinates.")
+			print("Polygon split requested on an split line with wrong number"
+				  "of coordinates.")
 
 		return False
 
@@ -223,16 +223,29 @@ def polygon_split(polygon=[], splitLine=[]):
 		return []
 
 	splitBoundary = extrLineLR.difference(splitLineLS)
-
 	# Sanity check to make sure we get the right result
-	if type(splitBoundary) is not MultiLineString and len(splitBoundary) != 2:
+	if type(splitBoundary) is not MultiLineString or len(splitBoundary) > 3:
 		if DEBUG_LEVEL & 0x04:
 			print("Polygon split requested but boundary split is invalid.")
 
 		return []
 
-	mask1 = Polygon(splitBoundary[0])
-	mask2 = Polygon(splitBoundary[1])
+	line1 = splitBoundary[0]
+	line2 = splitBoundary[1]
+	# Even though we use LinearRing, there is no wrap around and diff produces
+	#	3 strings. Need to union. Not sure if combining 1st and last strings 
+	#	is guaranteed to be the right combo. For now, place a check.
+	if len(splitBoundary) == 3:
+		if splitBoundary[0].coords[0] != splitBoundary[-1].coords[-1]:
+			print("The assumption that pts0[0] == pts2[-1] DOES not hold. Need"
+					"to investigate. Polygon split function.")
+			return []
+
+		line1 = LineString(list(list(splitBoundary[0].coords) +
+								list(splitBoundary[-1].coords))[:-1])
+
+	mask1 = Polygon(line1)
+	mask2 = Polygon(line2)
 
 	resP1Pol = pPol.intersection(mask1)
 	resP2Pol = pPol.intersection(mask2)
@@ -247,7 +260,7 @@ def polygon_split(polygon=[], splitLine=[]):
 if __name__ == '__main__':
 
 	# If package is launched from cmd line, run sanity checks
-	DEBUG_LEVEL = 0
+	DEBUG_LEVEL = 4
 
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	e = [(0, 0), (1, 1)]
@@ -312,4 +325,31 @@ if __name__ == '__main__':
 		result = "FAIL"
 	print("[%s] Simple valid split test."%result)
 
+
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+	e = [(0, 0.2), (1, 0.2)]
+	P1, P2 = polygon_split(P, e)
+	result = "PASS"
+	if set(P1[0]) != set([(1.0, 0.0),  (1.0, 0.2),  (0.0, 0.2),  (0.0, 0.0)]):
+		result = "FAIL"
+	if set(P2[0]) != set([(1.0, 1.0),  (0.0, 1.0),  (0.0, 0.2),  (1.0, 0.2)]):
+		result = "FAIL"
+	print("[%s] Simple valid split test."%result)
+
+
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+	e = [(0.2, 0), (0, 0.2)]
+	P1, P2 = polygon_split(P, e)
+	result = "PASS"
+	if set(P1[0]) != set([(0.2, 0.0),  (0.0, 0.2),  (0.0, 0.0)]):
+		result = "FAIL"
+	if set(P2[0]) != set([(1.0, 0.0),  (1.0, 1.0),  (0.0, 1.0),  (0.0, 0.2),  (0.2, 0.0)]):
+		result = "FAIL"
+	print("[%s] Simple valid split test."%result)
+
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (0.9, 0.1)]]]
+	e = [(0.05, 0), (0.05, 1)]
+	P1, P2 = polygon_split(P, e)
+
+	pretty_print_poly(P1)
 	pretty_print_poly(P2)

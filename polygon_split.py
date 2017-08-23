@@ -351,5 +351,16 @@ if __name__ == '__main__':
 	e = [(0.05, 0), (0.05, 1)]
 	P1, P2 = polygon_split(P, e)
 
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+	e = [(1, 0.8), (0.8, 1)]
+	P1, P2 = polygon_split(P, e)
+
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+	e = [(0.2, 1), (0, 0.8)]
+	P1, P2 = polygon_split(P, e)
+
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+	e = [(0, 0.2), (0.2, 0)]
+	P1, P2 = polygon_split(P, e)
 	pretty_print_poly(P1)
 	pretty_print_poly(P2)

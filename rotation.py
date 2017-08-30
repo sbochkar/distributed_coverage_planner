@@ -3,36 +3,38 @@ from math import sin
 
 
 def rotate_points(vertices, theta):
-	"""
-	Rotate a set of vertices by theta
+	"""Rotate a set of vertices by theta
 
-	Rotate a set of vertices consisting of (x,y) tuples by applygin rigid
-	transformation
+	Rotate a list of vertices consisting of (x,y) tuples by applygin rigid
+	transformation. Preserves the order of verticies.
 
 	Args:
-		vertices: list of (x, y) coordinates
-		theta: the angle of rotation
+		vertices: List of (x, y) coordinates
+		theta: Angle of rotation
 
 	Returns:
-		new_points: list of new points
+		rotatedVerts: List of new points
 	"""
 
-	cos_th = cos(theta)
-	sin_th = sin(theta)
+	global DEBUG_LEVEL
 
 	n = len(vertices)
 	if not n:
-		print "rotate: points list EMPTY!"
-		return None
+		if DEBUG_LEVEL & 0x04:
+			print("Rotation requested on empty input.")
+		return []
 
-	new_points = []
+	cosTh = cos(theta)
+	sinTh = sin(theta)
+
+	rotatedVerts = []
 	for i in range(n):
-		x_new = vertices[i][0]*cos_th-vertices[i][1]*sin_th
-		y_new = vertices[i][0]*sin_th+vertices[i][1]*cos_th
+		xNew = vertices[i][0]*cosTh - vertices[i][1]*sinTh
+		yNew = vertices[i][0]*sinTh + vertices[i][1]*cosTh
 
-		new_points.append( (x_new, y_new) )
+		rotatedVerts.append( (xNew, yNew) )
 
-	return new_points
+	return rotatedVerts
 
 
 def rotate_polygon(P, theta):

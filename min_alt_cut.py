@@ -142,7 +142,8 @@ def compute_min_alt_cut(polygon=[], vrtx=[]):
 		vrtx: A vertex from which the cut is made. Can be reflex or not.
 
 	Returns:
-		[TODO:] Not sure yet.
+		minimum cut pair: List of following format:
+			[TODO:] Not sure yet.
 	"""
 
 
@@ -211,57 +212,12 @@ def compute_min_alt_cut(polygon=[], vrtx=[]):
 					minCandidate = (cutCand, dirPair)
 					minCost = totalAlt
 
-	print minCost
-	print minCandidate
+	if DEBUG_LEVEL & 0x8:
+		print("Computed minimum altitude as: %4.2f"%minCost)
+		print("Cut: %s"%[vrtx, minCandidate[0]])
+		print("Direction 1: %4.2f Direc tion 2: %4.2f"%(minCandidate[1][0], minCandiadte[1][1]))
 
-
-#
-#
-#	for si in s:
-#		# Process each edge si, have to be cw
-#		lr_si = LinearRing([v[1]]+si)
-#		if lr_si.is_ccw:
-#			#print lr_si
-#			#print lr_si.is_ccw
-#			si = [si[1]]+[si[0]]
-#			#print si
-#
-#
-#		cut_point = si[0]
-#		#print P, v, cut_point
-#		result = polygon_split.split_polygon(P, [v[1], cut_point])
-#		if not result:
-#			continue
-#
-#		p_r, p_l = result
-#		if not LineString(p_l).is_simple:
-#			continue
-#		if not LineString(p_r).is_simple:
-#			continue
-#
-#		dirs_left = directions.get_directions_set([p_l, []])
-#		dirs_right = directions.get_directions_set([p_r, []])
-#
-#		#print dirs_left
-#		#print list(degrees(dir) for dir in dirs_left)
-#		#print get_altitude([p_l,[]], 3.5598169831690223)
-#		#print get_altitude([p_r,[]], 0)
-#
-#		# Look for all transition points
-#		for dir1 in dirs_left:
-#			for dir2 in dirs_right:
-#				tp = find_best_transition_point(si, v[1], dir1, dir2)
-#				# Here check if tp is collinear with v
-#				# If so and invisible, replace with visible collinear point
-#				if tp in collinear_dict.keys():
-#					pois.append((collinear_dict[tp], dir1, dir2))
-#				else:
-#					pois.append((tp, dir1, dir2))
-
-
-
-
-
+	return minCandidate
 
 if __name__ == '__main__':
 
@@ -321,14 +277,14 @@ if __name__ == '__main__':
 
 
 
-
-
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	e = [(0, 0), (1, 1)]
-
-	#compute_min_alt_cut(P, (0, 0))
+	print("Sanity test for the min alt computation procedure.")
 
 	P = [[(0, 0), (1, 0), (1.5, 1), (2, 0), (3, 0), (3, 2), (0, 2)], []]
-	compute_min_alt_cut(P, (1.5, 1))
+	minCut = compute_min_alt_cut(P, (1.5, 1))
+	result = "FAIL"
+	if minCut == ((1.5, 2.0), (0.0, 0.0)):
+		result = "PASS"
+	print("[%s] Simple shape cut test."%result)
+
 	#compute_min_alt_cut(P, (1, 1))
 	#compute_min_alt_cut(P, (0, 1))

@@ -2,31 +2,27 @@ from math import atan2
 from math import pi
 
 
-def get_directions_set(P):
-	"""
-	Generate a list of directions orthogonal to edges of P
+def get_directions_set(polygon=[]):
+	"""Generates a list of directions orthogonal to edges of polygon
 
-	TODO: Get rid of repeating directions
+	[TODO]: Efficiency could be improved by removing duplicate directions
 
 	Augs:
-		P: standard form polygon
+		polygon: a polygon in standard form
 	Returns:
-		dirs: set of directions [rad]
+		directions: set of directions [rad]
 	"""
-
 
 	ext = P[0]
 	holes = P[1]
-	dirs = []
+	directions = []
 
 	n = len(ext)
 	for i in range(n):
-		edge = [ext[i], ext[(i+1)%n]]
-		#print edge
-		ax, ay = edge[0]
-		bx, by = edge[1]
+		ax, ay = ext[i]
+		bx, by = ext[(i+1)%n]
 
-		dirs.append(atan2(by-ay, bx-ax)+pi/2)
+		directions.append(atan2(by-ay, bx-ax)+pi/2)
 
 
 	for hole in holes:
@@ -36,6 +32,6 @@ def get_directions_set(P):
 			ax, ay = edge[0]
 			bx, by = edge[1]
 
-			dirs.append(atan2(by-ay, bx-ax)+pi/2)
+			directions.append(atan2(by-ay, bx-ax)+pi/2)
 
-	return dirs
+	return directions

@@ -6,6 +6,9 @@ from shapely.geometry import MultiLineString
 from shapely.geometry import LinearRing
 
 
+DEBUG_LEVEL = 0
+
+
 def pretty_print_poly(P=[]):
 	"""Pretty prints cannonical polygons to help with debugging
 
@@ -52,8 +55,6 @@ def inputs_valid(polygon=[], splitLine=[]):
 		True: If inputs are valid. Useful constructs otherwise.
 	"""
 
-
-	global DEBUG_LEVEL
 
 	# We are very much interesting in rebustness, so performing sanity checks.
 	if not splitLine:
@@ -204,9 +205,6 @@ def polygon_split(polygon=[], splitLine=[]):
 	"""
 
 
-	global DEBUG_LEVEL
-
-
 	if not inputs_valid(polygon, splitLine):
 		return []
 
@@ -259,6 +257,8 @@ def polygon_split(polygon=[], splitLine=[]):
 
 if __name__ == '__main__':
 
+
+	global DEBUG_LEVEL
 	# If package is launched from cmd line, run sanity checks
 	DEBUG_LEVEL = 4
 

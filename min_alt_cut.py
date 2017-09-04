@@ -1,13 +1,16 @@
 from math import atan2
 from math import pi
+from itertools import product
 
 from shapely.geometry import Point
 from shapely.geometry import LineString
 
 from rotation import rotate_points
+from polygon_split import polygon_split
+from altitude import get_altitude
 
 
-def compute_transition_point(edge=[], theta=[], cutVertex=[]):
+def compute_transition_point(edge=[], theta=0, cutVertex=[]):
 	"""Computes the transition point for a given theta and cutVertex
 
 	This function computes transition point as defined in the paper. If
@@ -33,7 +36,7 @@ def compute_transition_point(edge=[], theta=[], cutVertex=[]):
 		return []
 
 
-	rotatedEdge = rotate_points(edge, -theta)
+	rotatedEdge = rotate_points(edge, -1.0*theta)
 	rotatedCutOrigin = rotate_points([cutVertex], -theta)[0]
 
 	minYidx, (tmpX, minY) = min(enumerate(rotatedEdge), key=lambda pt: pt[1][1])
@@ -97,7 +100,7 @@ def get_directions_set(polygon=[]):
 		ax, ay = ext[i]
 		bx, by = ext[(i+1)%n]
 
-		dirs.append(atan2(by-ay, bx-ax)+pi/2)
+		directions.append(atan2(by-ay, bx-ax)+pi/2)
 
 
 	for hole in holes:
@@ -107,9 +110,9 @@ def get_directions_set(polygon=[]):
 			ax, ay = edge[0]
 			bx, by = edge[1]
 
-			dirs.append(atan2(by-ay, bx-ax)+pi/2)
+			directions.append(atan2(by-ay, bx-ax)+pi/2)
 
-	return dirs
+	return directions
 
 
 def compute_min_alt_cut(polygon=[], vrtx=[]):
@@ -144,9 +147,13 @@ def compute_min_alt_cut(polygon=[], vrtx=[]):
 
 
 	if not polygon:
+		if DEBUG_LEVEL & 0x04:
+			print("Min alt cut is requested on an empty polygon.")
 		return []
 
 	if not vrtx:
+		if DEBUG_LEVEL & 0x04:
+			print("Min alt cut is requested with empty vertex.")
 		return []
 
 
@@ -154,6 +161,8 @@ def compute_min_alt_cut(polygon=[], vrtx=[]):
 	directions = get_directions_set(polygon)
 
 	# Initialize and compute a list containing candidates for the optimal cut.
+	# Due to the nature of floats, this list will contain a lot of duplicates.
+	# [TODO]: Get rid of duplicates
 	cutCandidates = []
 
 	ext, holes = P
@@ -162,85 +171,92 @@ def compute_min_alt_cut(polygon=[], vrtx=[]):
 	for i in range(n):
 		edge = [ext[i], ext[(i+1)%n]]
 
-		directions.append(ext[i])
+		cutCandidates.append(ext[i])
 
 		# Iterate over all directions and find transition points
 		for theta in directions:
-			transPt = compute_transition_point(edge, theta, rtx)
+			transPt = compute_transition_point(edge, theta, vrtx)
 			if transPt:
-				directions.append(transPt)
+				cutCandidates.append(transPt)
+
+		if DEBUG_LEVEL & 0x8:
+			print("Cut end points candidates so far: %s"%cutCandidates)
 
 
-	# Evaluate these candidates
+	# For any pair of directions, cut and evaluate
+	minCost = 10e10
+	minCandidate = []
 
+	for dirPair in product(directions, repeat=2):
+		for cutCand in cutCandidates:
 
+			splitLine = ([vrtx, cutCand])
+			result = polygon_split(P, splitLine)
 
-	# 1 Initialize a list of candidate cut points
-	# 2 Generate a list of directions
-	# For each edge of a polygon
-	# 3 Add edge endpoints to the list of candidates
-	# 4 Calculate transition points foreach direction and add to the cand list
-
-	# 5 Continue with evaluation
-
-
-
-
-
-
-
-	# First order of business, set up data structures to assist in computation.
-	# Shift the exterior boundary of the polygon such that the vrtx is the first
-	#	vertex.
-	try:
-		vrtxIdx = polygon[0].index(vrtx)
-	except:
-		return []
-
-	extr = list(polygon[0][vrtxIdx:]) + list(polygon[0][:vrtxIdx])
-
-
-
-	for si in s:
-		# Process each edge si, have to be cw
-		lr_si = LinearRing([v[1]]+si)
-		if lr_si.is_ccw:
-			#print lr_si
-			#print lr_si.is_ccw
-			si = [si[1]]+[si[0]]
-			#print si
-
-
-		cut_point = si[0]
-		#print P, v, cut_point
-		result = polygon_split.split_polygon(P, [v[1], cut_point])
-		if not result:
-			continue
-
-		p_r, p_l = result
-		if not LineString(p_l).is_simple:
-			continue
-		if not LineString(p_r).is_simple:
-			continue
-
-		dirs_left = directions.get_directions_set([p_l, []])
-		dirs_right = directions.get_directions_set([p_r, []])
-
-		#print dirs_left
-		#print list(degrees(dir) for dir in dirs_left)
-		#print get_altitude([p_l,[]], 3.5598169831690223)
-		#print get_altitude([p_r,[]], 0)
-
-		# Look for all transition points
-		for dir1 in dirs_left:
-			for dir2 in dirs_right:
-				tp = find_best_transition_point(si, v[1], dir1, dir2)
-				# Here check if tp is collinear with v
-				# If so and invisible, replace with visible collinear point
-				if tp in collinear_dict.keys():
-					pois.append((collinear_dict[tp], dir1, dir2))
+			if DEBUG_LEVEL % 0x8:
+				if result:
+					print("%s Split Line: %s"%('GOOD', splitLine,))
 				else:
-					pois.append((tp, dir1, dir2))
+					print("%s Split Line: %s"%("BAD ", splitLine))
+
+			if result:
+				pol1, pol2 = result
+
+				alt1 = get_altitude(pol1, dirPair[0])
+				alt2 = get_altitude(pol2, dirPair[1])
+
+				totalAlt = alt1+alt2
+
+				if totalAlt <= minCost:
+					minCandidate = (cutCand, dirPair)
+					minCost = totalAlt
+
+	print minCost
+	print minCandidate
+
+
+#
+#
+#	for si in s:
+#		# Process each edge si, have to be cw
+#		lr_si = LinearRing([v[1]]+si)
+#		if lr_si.is_ccw:
+#			#print lr_si
+#			#print lr_si.is_ccw
+#			si = [si[1]]+[si[0]]
+#			#print si
+#
+#
+#		cut_point = si[0]
+#		#print P, v, cut_point
+#		result = polygon_split.split_polygon(P, [v[1], cut_point])
+#		if not result:
+#			continue
+#
+#		p_r, p_l = result
+#		if not LineString(p_l).is_simple:
+#			continue
+#		if not LineString(p_r).is_simple:
+#			continue
+#
+#		dirs_left = directions.get_directions_set([p_l, []])
+#		dirs_right = directions.get_directions_set([p_r, []])
+#
+#		#print dirs_left
+#		#print list(degrees(dir) for dir in dirs_left)
+#		#print get_altitude([p_l,[]], 3.5598169831690223)
+#		#print get_altitude([p_r,[]], 0)
+#
+#		# Look for all transition points
+#		for dir1 in dirs_left:
+#			for dir2 in dirs_right:
+#				tp = find_best_transition_point(si, v[1], dir1, dir2)
+#				# Here check if tp is collinear with v
+#				# If so and invisible, replace with visible collinear point
+#				if tp in collinear_dict.keys():
+#					pois.append((collinear_dict[tp], dir1, dir2))
+#				else:
+#					pois.append((tp, dir1, dir2))
 
 
 
@@ -250,6 +266,8 @@ def compute_min_alt_cut(polygon=[], vrtx=[]):
 if __name__ == '__main__':
 
 	# If package is launched from cmd line, run sanity checks
+	global DEBUG_LEVEL
+
 	DEBUG_LEVEL = 0 # 0x8+0x4
 
 	print("Sanity tests for transition point computation.")
@@ -308,7 +326,9 @@ if __name__ == '__main__':
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	e = [(0, 0), (1, 1)]
 
-	compute_min_alt_cut(P, (0, 0))
-	compute_min_alt_cut(P, (1, 0))
-	compute_min_alt_cut(P, (1, 1))
-	compute_min_alt_cut(P, (0, 1))
+	#compute_min_alt_cut(P, (0, 0))
+
+	P = [[(0, 0), (1, 0), (1.5, 1), (2, 0), (3, 0), (3, 2), (0, 2)], []]
+	compute_min_alt_cut(P, (1.5, 1))
+	#compute_min_alt_cut(P, (1, 1))
+	#compute_min_alt_cut(P, (0, 1))

@@ -3,6 +3,7 @@ from math import pi
 from itertools import product
 
 from shapely.geometry import Point
+from shapely.geometry import Polygon
 from shapely.geometry import LineString
 
 from rotation import rotate_points
@@ -152,14 +153,34 @@ def compute_min_alt_cut(polygon=[], vrtx=[]):
 			print("Min alt cut is requested on an empty polygon.")
 		return []
 
+	if len(polygon[0]) < 3:
+		if DEBUG_LEVEL & 0x04:
+			print("Min alt cut is requested on a line.")
+		return []
+
+
 	if not vrtx:
 		if DEBUG_LEVEL & 0x04:
 			print("Min alt cut is requested with empty vertex.")
 		return []
 
+	if not Polygon(*polygon).is_simple:
+		if DEBUG_LEVEL & 0x04:
+			print("Min cut is requested on an non simple polygon.")
+		return []		
+
+	if not Polygon(*polygon).is_valid:
+		if DEBUG_LEVEL & 0x04:
+			print("Min cut is requested on an non valid polygon.")
+		return []	
 
 	# Generate a list of directions for the polygon
 	directions = get_directions_set(polygon)
+	
+	# Find the minimum altitude for original polygon, a.k.a no cut
+	minDirection = min(directions, key=lambda theta: get_altitude(P, theta))
+	minAltitudeOriginal = get_altitude(polygon, minDirection)
+
 
 	# Initialize and compute a list containing candidates for the optimal cut.
 	# Due to the nature of floats, this list will contain a lot of duplicates.
@@ -215,7 +236,13 @@ def compute_min_alt_cut(polygon=[], vrtx=[]):
 	if DEBUG_LEVEL & 0x8:
 		print("Computed minimum altitude as: %4.2f"%minCost)
 		print("Cut: %s"%[vrtx, minCandidate[0]])
-		print("Direction 1: %4.2f Direc tion 2: %4.2f"%(minCandidate[1][0], minCandiadte[1][1]))
+		print("Direction 1: %4.2f Direc tion 2: %4.2f"%(minCandidate[1][0], minCandidate[1][1]))
+
+	if minAltitudeOriginal < minCost:
+		if DEBUG_LEVEL & 0x8:
+			print("No cut results in minimum altitude")
+	
+		return []
 
 	return minCandidate
 
@@ -224,7 +251,7 @@ if __name__ == '__main__':
 	# If package is launched from cmd line, run sanity checks
 	global DEBUG_LEVEL
 
-	DEBUG_LEVEL = 0 # 0x8+0x4
+	DEBUG_LEVEL = 0 #0x8+0x4
 
 	print("Sanity tests for transition point computation.")
 
@@ -277,7 +304,7 @@ if __name__ == '__main__':
 
 
 
-	print("Sanity test for the min alt computation procedure.")
+	print("\n\nSanity test for the min alt computation procedure.")
 
 	P = [[(0, 0), (1, 0), (1.5, 1), (2, 0), (3, 0), (3, 2), (0, 2)], []]
 	minCut = compute_min_alt_cut(P, (1.5, 1))
@@ -286,5 +313,30 @@ if __name__ == '__main__':
 		result = "PASS"
 	print("[%s] Simple shape cut test."%result)
 
-	#compute_min_alt_cut(P, (1, 1))
-	#compute_min_alt_cut(P, (0, 1))
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+	minCut = compute_min_alt_cut(P, (0, 0))
+	result = "FAIL"
+	if not minCut:
+		result = "PASS"
+	print("[%s] Simple shape cut test."%result)
+
+	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+	minCut = compute_min_alt_cut(P, (-1, 0))
+	result = "FAIL"
+	if not minCut:
+		result = "PASS"
+	print("[%s] Origin outside the polygon test."%result)
+
+	P = [[(0, 0), (-1,0), (1, 0), (1, 1), (0, 1)], []]
+	minCut = compute_min_alt_cut(P, (0, 0))
+	result = "FAIL"
+	if not minCut:
+		result = "PASS"
+	print("[%s] Self-intersecting polygon test."%result)
+
+	P = [[(0, 0), (-1,0)], []]
+	minCut = compute_min_alt_cut(P, (0, 0))
+	result = "FAIL"
+	if not minCut:
+		result = "PASS"
+	print("[%s] No polygon but line test."%result)

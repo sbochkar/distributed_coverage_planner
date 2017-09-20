@@ -7,7 +7,7 @@ from shapely.geometry import MultiPolygon
 
 from polygon_area import polygon_area
 
-def chi(polygon=[[],[]], init_pos=(0,0), radius=1, lin_penalty=1.0, angular_penalty=1.0):
+def compute_chi(polygon=[[],[]], init_pos=(0,0), radius=1, lin_penalty=1.0, angular_penalty=1.0):
 	"""
 	Metric chi: Approximation of the cost of a coverage path for a polygon P
 

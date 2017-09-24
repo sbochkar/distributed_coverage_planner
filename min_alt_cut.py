@@ -236,7 +236,7 @@ def compute_min_alt_cut(polygon=[], vrtx=[]):
 	if DEBUG_LEVEL & 0x8:
 		print("Computed minimum altitude as: %4.2f"%minCost)
 		print("Cut: %s"%[vrtx, minCandidate[0]])
-		print("Direction 1: %4.2f Direc tion 2: %4.2f"%(minCandidate[1][0], minCandidate[1][1]))
+		print("Direction 1: %4.2f Direction 2: %4.2f"%(minCandidate[1][0], minCandidate[1][1]))
 
 	if minAltitudeOriginal < minCost:
 		if DEBUG_LEVEL & 0x8:

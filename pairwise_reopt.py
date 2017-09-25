@@ -7,6 +7,7 @@ from itertools import product
 from chi import compute_chi
 from polygon_split import polygon_split
 
+
 RADIUS = 0.1
 LINEAR_PENALTY = 1		# Weights for the cost function
 ANGULAR_PENALTY = 10	# Weights for the cost function
@@ -56,6 +57,9 @@ def compute_pairwise_optimal(polygonA=[],
 	"""
 	Takes two adjacent polygons and attempts to modify the shared edge such that
 	the metric chi is reduced.
+
+	TODO:
+		Need to investigate assignment of cells to robots.
 
 	Args:
 		polygonA: First polygon in canonical form.

@@ -12,6 +12,7 @@ RADIUS = 0.1
 LINEAR_PENALTY = 1		# Weights for the cost function
 ANGULAR_PENALTY = 10	# Weights for the cost function
 
+DEBUG_LEVEL = 0
 
 def poly_shapely_to_canonical(polygon=[]):
 	"""
@@ -141,9 +142,6 @@ def compute_pairwise_optimal(polygonA=[],
 
 
 
-
-
-
 	# Perform intialization stage for the optimization
 	# Initializae the search space as well original cost
 	polyExterior = polygonUnion.exterior
@@ -211,7 +209,8 @@ def compute_pairwise_optimal(polygonA=[],
 	
 		return []
 
-	return minCandidate
+	newPolygons = polygon_split(polygonUnionCanon, minCandidate)
+	return newPolygons
 
 
 if __name__ == '__main__':

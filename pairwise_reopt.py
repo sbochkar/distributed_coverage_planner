@@ -14,6 +14,7 @@ ANGULAR_PENALTY = 10	# Weights for the cost function
 
 DEBUG_LEVEL = 0
 
+
 def poly_shapely_to_canonical(polygon=[]):
 	"""
 	A simple helper function to convert a shapely object representing a polygon

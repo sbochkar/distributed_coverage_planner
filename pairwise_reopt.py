@@ -173,15 +173,19 @@ def compute_pairwise_optimal(polygonA=[],
 
 	# This search is over any two pairs of samples points on the exterior
 	# It is a very costly search.
-	for dirPair in product(searchSpace, repeat=2):
+	for cutEdge in product(searchSpace, repeat=2):
 
-		result = polygon_split(polygonUnionCanon, dirPair)
+		if DEBUG_LEVEL & 0x8:
+			print("polygonUnionCanon: %s"%polygonUnionCanon)
+			print("Cut candidate: %s"%(cutEdge, ))
+		
+		result = polygon_split(polygonUnionCanon, cutEdge)
 
-		if DEBUG_LEVEL % 0x8:
+		if DEBUG_LEVEL & 0x8:
 			if result:
-				print("%s Split Line: %s"%('GOOD', dirPair,))
+				print("%s Split Line: %s"%('GOOD', cutEdge,))
 			else:
-				print("%s Split Line: %s"%("BAD ", dirPair))
+				print("%s Split Line: %s"%("BAD ", cutEdge))
 
 		if result:
 			chiL = compute_chi(polygon = result[0],
@@ -197,7 +201,7 @@ def compute_pairwise_optimal(polygonA=[],
 
 			maxChi = max(chiL, chiR)
 			if maxChi <= minMaxChi:
-				minCandidate = dirPair
+				minCandidate = cutEdge
 				minMaxChi = maxChi
 
 	if DEBUG_LEVEL & 0x8:

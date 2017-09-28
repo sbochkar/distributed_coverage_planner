@@ -1,45 +1,45 @@
 import numpy as np
 from operator import itemgetter
+
 from shapely.geometry import LineString
+from shapely.geometry import LinearRing
 
 import coverage_plot as splot
 from polygons import gen_poly_and_decomp
 
-from anchored_decomposition import anchored_decomposition
-from anchored_decomposition import assign_sites_to_polygon
 from polygon_area import polygon_area
 from convex_divide import convex_divide
-import adjacency as adj
-import min_alt_discrt as discrt
-import chi
-import min_alt_decompose as mad
-import operations as op
-import reflex
-import cuts
-import altitude as alt
-import get_mapping
-import dubins_cost
-import solver
-import single_planner
-from new_funks import pair_wise_reoptimization
-from new_funks import reopt_recursion
-from new_funks import reopt_recursion_BFT
-from shapely.geometry import LinearRing
+from decomposition_processing import compute_adjacency
+from chi import compute_chi
+from reopt_recursion import dft_recursion
+#import min_alt_discrt as discrt
+#import chi
+#import min_alt_decompositionose as mad
+#import operations as op
+#import reflex
+#import cuts
+#import altitude as alt
+#import get_mapping
+#import dubins_cost
+#import solver
+#import single_planner
+
 
 GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
 DEBUG = []
 NUM_SAMPLES = 10
+NUM_ITERATIONS = 20
 RADIUS = 0.2
-LIN_PENALTY = 1.0
+LINEAR_PENALTY = 1.0
 ANGULAR_PENALTY = 10*1.0/360
+DEBUG_LEVEL = 0
 
 
 
-
-def pretty_print_decomp(decomp):
-	print("[..] Decomposition:")
-	for idx, poly in enumerate(decomp):
+def pretty_print_decomposition(decomposition):
+	print("[..] decompositionosition:")
+	for idx, poly in enumerate(decomposition):
 		print("%2d: "%idx),
 		boundary = poly[0]
 		for elem in boundary:
@@ -50,107 +50,87 @@ def pretty_print_decomp(decomp):
 
 
 
-# Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 7
-orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
+# Since my decompositionosition tehcnique is lacking, start by hard coding the polygons and decompositionositions
+POLY_ID = 1
+orig_poly, sites, decomposition = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment
-cell_to_site_map = assign_sites_to_polygon(decomp, sites)
-#cell_to_site_map = {0: (10,0), 1:(10,1), 2:(0,1), 3:(0,0)}
+#cellToSiteMap = assign_sites_to_polygon(decomposition, sites)
+cellToSiteMap = {0: (10,0), 1:(10,1), 2:(0,1), 3:(0,0)}
 if DEBUG: 
-	print("[.] Cell to Site Map: %s."%cell_to_site_map)
-
-adj_matrix = adj.get_adjacency_as_matrix(decomp)
+	print("[.] Cell to Site Map: %s."%cellToSiteMap)
 
 
-# Display the original costs
-chi_costs = []
-for idx, poly in enumerate(decomp):
-	cost = chi.chi(polygon=decomp[idx], init_pos=cell_to_site_map[idx],
-					radius=RADIUS, lin_penalty=LIN_PENALTY,
-					angular_penalty=ANGULAR_PENALTY)
-	chi_costs.append((idx, cost))
-chi_costs_sorted = sorted(chi_costs, key=lambda v:v[1], reverse=True)
-print("[.] Original costs: %s"%chi_costs_sorted)
+# Output initial sorted costs
+chiCosts = []
+for idx, poly in enumerate(decomposition):
+	cost = compute_chi(polygon = decomposition[idx],
+					   initPos = cellToSiteMap[idx],
+					   radius = RADIUS,
+					   linPenalty = LINEAR_PENALTY,
+					   angPenalty = ANGULAR_PENALTY)
+	chiCosts.append((idx, cost))
+sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
+print("[.] Initial costs: %s"%sortedChiCosts)
 
 
-for idx, poly in enumerate(decomp):
-	if not LinearRing(poly[0]).is_simple:
-		print("[!!!!!] WHYWYYWEHWYEEHGW")
-		print idx
+#	Run the optimization procedure for NUM_ITERATIONS
+for i in range(NUM_ITERATIONS):
 
+	chiCosts = []
+	for idx, poly in enumerate(decomposition):
+		cost = compute_chi(polygon = decomposition[idx],
+						   initPos = cellToSiteMap[idx],
+						   radius = RADIUS,
+						   linPenalty = LINEAR_PENALTY,
+						   angPenalty = ANGULAR_PENALTY)
+		chiCosts.append((idx, cost))
+	sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
 
+	if DEBUG_LEVEL & 0x8:
+		print("[.] Old costs: %s"%sortedChiCosts)
 
-M = 20
-iterations = 0
-while iterations < M:
-	iterations += 1
+	adjacencyMatrix = compute_adjacency(decomposition)
 
+	if not dft_recursion(decomposition,
+						 adjacencyMatrix,
+						 sortedChiCosts[0][0],
+						 cellToSiteMap):
+		print("[%3d/%3d] No cut was made!"%(i, NUM_ITERATIONS))
 
-
-	chi_costs = []
-	for idx, poly in enumerate(decomp):
-		cost = chi.chi(polygon=decomp[idx], init_pos=cell_to_site_map[idx],
-						radius=RADIUS, lin_penalty=LIN_PENALTY,
-						angular_penalty=ANGULAR_PENALTY)
-		chi_costs.append((idx, cost))
-	chi_costs_sorted = sorted(chi_costs, key=lambda v:v[1], reverse=True)
-	if DEBUG:
-		print("[.] Old costs: %s"%chi_costs_sorted)
-
-	# Begin the recursion process
-	mad.collinear_correction(decomp)
-	mad.post_processs_decomposition(decomp)
-	adj_matrix = adj.get_adjacency_as_matrix(decomp)
-
-	reopt_recursion.level = 0
-	reopt_recursion(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map)
-	#pretty_print_decomp(decomp)
-
-	#q = [chi_costs_sorted[0][0]]
-	#reopt_recursion_BFT(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map, q)
-	#if DEBUG:
-
-for idx, poly in enumerate(decomp):
-	if not LinearRing(poly[0]).is_simple:
-		print("[!!!!!] WHYWYYWEHWYEEHGW")
-		print idx
-#pretty_print_decomp(decomp)
-#cell_to_site_map = {3: (10,10), 1:(0,0), 2:(10,0), 0:(0,10)}
-
-# Print the refined costs
-chi_costs = []
-for idx, poly in enumerate(decomp):
-	cost = chi.chi(polygon=decomp[idx], init_pos=cell_to_site_map[idx],
-					radius=RADIUS, lin_penalty=LIN_PENALTY,
-					angular_penalty=ANGULAR_PENALTY)
-	chi_costs.append((idx, cost))
-chi_costs_sorted = sorted(chi_costs, key=lambda v:v[1], reverse=True)
-print("[.] New costs: %s"%chi_costs_sorted)
+# Output new sorted costgs
+chiCosts = []
+for idx, poly in enumerate(decomposition):
+	cost = compute_chi(polygon = decomposition[idx],
+					   initPos = cellToSiteMap[idx],
+					   radius = RADIUS,
+					   linPenalty = LINEAR_PENALTY,
+					   angPenalty = ANGULAR_PENALTY)
+	chiCosts.append((idx, cost))
+sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
+print("[.] New costs: %s"%sortedChiCosts)
 
 
 
 print("[..] Plotting the original polygon and sites.")
-mad.collinear_correction(decomp)
-mad.post_processs_decomposition(decomp)
-adj_matrix = adj.get_adjacency_as_matrix(decomp)
+adjacencyMatrix = compute_adjacency(decomposition)
+print("New decomposition: %s"%decomposition)
 
 
-
-#segments = discrt.discritize_set(decomp, RADIUS)
+#segments = discrt.discritize_set(decomposition, RADIUS)
 #mapping = get_mapping.get_mapping(segments)
 #cost_matrix, cluster_list = dubins_cost.compute_costs(orig_poly, mapping, RADIUS/2)
 #solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
 #tour = solver.read_tour("cpp_test")
-#print cell_to_site_map
+#print cellToSiteMap
 
-single_planner.single_planner(decomp, RADIUS, orig_poly, cell_to_site_map)
+#single_planner.single_planner(decomposition, RADIUS, orig_poly, cellToSiteMap)
 
 #Initialize plotting tools
 #ax = splot.init_axis()
 #splot.plot_polygon_outline(ax, orig_poly)
-#splot.plot_decomposition(ax, decomp, adj_matrix, orig_poly)
-#splot.plot_init_poss_and_assignment(ax, sites, cell_to_site_map, decomp)
+#splot.plot_decompositionosition(ax, decomposition, adj_matrix, orig_poly)
+#splot.plot_init_poss_and_assignment(ax, sites, cellToSiteMap, decomposition)
 #splot.plot_samples(ax, segments)
 #splot.plot_tour_dubins(ax, tour, mapping, RADIUS/2)
 #splot.display()

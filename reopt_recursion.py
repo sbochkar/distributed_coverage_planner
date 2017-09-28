@@ -8,10 +8,11 @@ from chi import compute_chi
 from pairwise_reopt import compute_pairwise_optimal
 from decomposition_processing import compute_adjacency
 
-RADIUS = 0.1
-LINEAR_PENALTY = 1		# Weights for the cost function
-ANGULAR_PENALTY = 10	# Weights for the cost function
-
+# Need to move these to the main calling function
+RADIUS = 0.2
+LINEAR_PENALTY = 1.0
+ANGULAR_PENALTY = 10*1.0/360
+DEBUG_LEVEL = 0
 
 def dft_recursion(decomposition=[],
 				  adjacencyMatrix=[],
@@ -35,10 +36,6 @@ def dft_recursion(decomposition=[],
 		True if a succseful reoptimization was performed. False otherwise.
 	"""
 
-	if DEBUG_LEVEL & 0x8:
-		print("Recursion level: %d"%reopt_recursion.level)
-		print("Cell %d has maximum cost of : %f"%(maxVertexIdx, maxVertexCost))
-
 	maxVertexCost = compute_chi(polygon = decomposition[maxVertexIdx],
 								initPos = cellToSiteMap[maxVertexIdx],
 								radius = RADIUS,
@@ -50,12 +47,12 @@ def dft_recursion(decomposition=[],
 
 
 	surroundingCellIdxs = []
-	for cellIdx, cell in enumerate(adjacencyMatrix[maxVertexIdx]):
-		if cell is not None:
+	for cellIdx, isAdjacent in enumerate(adjacencyMatrix[maxVertexIdx]):
+		if isAdjacent:
 			surroundingCellIdxs.append(cellIdx)
 
 	if DEBUG_LEVEL & 0x8:
-		print("[.] Surrounding Cell Idxs: %s"%(surroundingCellIdxs,))
+		print("Surrounding Cell Idxs: %s"%(surroundingCellIdxs,))
 
 
 	surroundingChiCosts = []
@@ -67,12 +64,12 @@ def dft_recursion(decomposition=[],
 						   angPenalty = ANGULAR_PENALTY)
 		surroundingChiCosts.append((cellIdx, cost))
 
-	if DEBUG_LEVEL & 0x8:
-		print("Neghbours and chi: %s"%surroundingChiCosts)
 
 	sortedSurroundingChiCosts = sorted(surroundingChiCosts,
 									   key = lambda v:v[1],
 									   reverse = False)
+	if DEBUG_LEVEL & 0x8:
+		print("Neghbours and chi: %s"%sortedSurroundingChiCosts)
 
 	# Idea: For a given cell with maximum cost, search all the neighbors
 	#		and sort them based on their chi cost.
@@ -99,7 +96,7 @@ def dft_recursion(decomposition=[],
 
 		if cellChiCost < maxVertexCost:
 			if DEBUG_LEVEL & 0x8:
-				print("Attempting %d and %d."%(maxVertexIdx, cellIdx))
+				print("Attempting reopt %d and %d."%(maxVertexIdx, cellIdx))
 
 
 			result = compute_pairwise_optimal(polygonA = decomposition[maxVertexIdx],

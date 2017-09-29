@@ -5,7 +5,8 @@ from shapely.geometry import LineString
 from shapely.geometry import MultiLineString
 from shapely.geometry import LinearRing
 
-
+# Bit mask:
+#	0x8: Lowest level logs. Happen very often.
 DEBUG_LEVEL = 0
 
 
@@ -33,134 +34,6 @@ def pretty_print_poly(P=[]):
 			print("(%3.1f, %3.1f),"%(pts[0], pts[1])),
 		print("")
 		holeCnt += 1
-
-
-def inputs_valid(polygon=[], splitLine=[]):
-	""" Quick function to check validity of inputs
-
-	Perform a variety of checks to make sure we only admit valid inputs.
-	This is mainly to ensure as much robsutness as possible. In the past, not
-	having these checks have lead to a number of problems.
-
-	Args:
-		polygon: Polygon in the form of [ [], [[],...] ] where polygon[0] is
-			the exterior boundary of the polygon and polygon[1] is the list
-			of boundaries of holes.
-			Exterior boundary must be in ccw order. Last point != first point.
-			Same for hole boundaries.
-		splitLine: A line along which to split polygon into two. A list of 2
-			tuples specifying coordinates of straight line
-
-	Returns:
-		True: If inputs are valid. Useful constructs otherwise.
-	"""
-
-
-	# We are very much interesting in rebustness, so performing sanity checks.
-	if not splitLine:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on an empty split line.")
-
-		return False
-
-	if len(splitLine) != 2:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on an split line with wrong number"
-				  "of coordinates.")
-
-		return False
-
-	if not polygon or len(polygon) != 2:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on a polygon of wrong format.")
-
-		return False
-
-
-	extr, holes = polygon
-
-	if not extr:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on a polygon with empty exterior.")
-
-		return False
-
-	pPol = Polygon(*polygon)
-
-	if not pPol.is_valid:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested on an invalid polygon.")
-
-		return False
-
-	return True
-
-
-def parameters_valid(commonPts=[], holes=[], splitLineLS=[], pPol=[]):
-	""" Quick function to check validity of some interim variable of the algo
-
-	Perform a variety of checks to make sure we only admit valid inputs.
-	This is mainly to ensure as much robsutness as possible. In the past, not
-	having these checks have lead to a number of problems.
-
-	Args:
-		commonPts: Points resulted in intersection of split line and boundary.
-			Should be MultiPoint object.
-		holes: Hole boundaries of the original polygon.
-		splitLineLS: LineString object representing the split line.
-		pPol: Polygon object representing the polygon under study.
-
-	Returns:
-		True: If paramters are valid. False otherwise.
-	"""
-
-	if not commonPts:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested but split line is within a polygon.")
-
-		return False
-
-	if type(commonPts) is not MultiPoint:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested but split line is not valid.")
-
-		return False
-
-	if len(commonPts) > 2:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested but split line crosses many times.")
-
-		return False
-
-
-	# A really crude way to check if the line is outside the polygon
-	temp = pPol.union(splitLineLS)
-	if type(temp) is not Polygon:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested but split line is outside the polygon.")
-		return False
-#	if not splitLineLS.crosses(pPol):
-#		if DEBUG_LEVEL & 0x04:
-#			print("Polygon split requested but split line is outside the polygon.")
-#
-#		return False
-#
-#	if splitLineLS.touches(pPol):
-#		if DEBUG_LEVEL & 0x04:
-#			print("Polygon split requested but split line is outside the polygon.")
-#
-#		return False
-
-	for hole in holes:
-		holeLS = LinearRing(hole)
-
-		if splitLineLS.intersects(holeLS):
-			if DEBUG_LEVEL & 0x04:
-				print("Polygon split requested but split line crosses a hole.")
-
-			return False
-
-	return True
 
 
 def convert_to_canonical(P=[]):
@@ -224,35 +97,72 @@ def polygon_split(polygon=[], splitLine=[]):
 
 	"""
 
-
-	if not inputs_valid(polygon, splitLine):
+	# Empty splitLine test
+	if not splitLine:
+		return []
+	# Empty polygon test
+	if not polygon:
+		return [] 
+	# Validity of splitLine
+	if len(splitLine) != 2:
+		return []
+	# Validity of polygon
+	if len(polygon) != 2:
 		return []
 
 	extr, holes = polygon
-	pPol = Polygon(*polygon)
 
+	# Validity of exterior of polygon
+	if not extr:
+		return []
+
+
+	pPol = Polygon(*polygon)
 	splitLineLS = LineString(splitLine)
 	extrLineLR = LinearRing(extr)
 
+
+	# Check validity of the polygon
+	if not pPol.is_valid:
+		return []
+
 	# This calculates the points on the boundary where the split will happen.
 	commonPts = extrLineLR.intersection(splitLineLS)
-	if DEBUG_LEVEL & 0x04:
-		print("Intersection points: %s"%commonPts)
+	if DEBUG_LEVEL & 0x8:
+		print("Cut intersects boundary at: %s"%commonPts)
 
 
-	if not parameters_valid(commonPts, holes, splitLineLS, pPol):
+	# No intersection check.
+	if not commonPts:
 		return []
+	# This intersection should always have only 2 points.
+	if type(commonPts) is not MultiPoint:
+		return []
+	# Should only ever contain two points.
+	if len(commonPts) != 2:
+		return []
+	# Split line should be inside polygon.
+	if not splitLineLS.within(pPol):
+		return []
+	# Check to see if cut line touches any holes
+	for hole in holes:
+		holeLS = LinearRing(hole)
+		if splitLineLS.intersects(holeLS):
+			return []
+
+
+
 
 	splitBoundary = extrLineLR.difference(splitLineLS)
-	# Sanity check to make sure we get the right result
-	if (type(splitBoundary) is not MultiLineString) or (len(splitBoundary) > 3):
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested but boundary split is invalid.")
-
+	# Check that splitBoundary is a collection of linestrings
+	if type(splitBoundary) is not MultiLineString:
 		return []
+	# Make sure there are only 2 linestrings in the collection
+ 	if len(splitBoundary) > 3 or len(splitBoundary) < 2:
+ 		return []
 
-	line1 = splitBoundary[0]
-	line2 = splitBoundary[1]
+
+
 	# Even though we use LinearRing, there is no wrap around and diff produces
 	#	3 strings. Need to union. Not sure if combining 1st and last strings 
 	#	is guaranteed to be the right combo. For now, place a check.
@@ -262,27 +172,27 @@ def polygon_split(polygon=[], splitLine=[]):
 					"to investigate. Polygon split function.")
 			return []
 
-		line1 = LineString(list(list(splitBoundary[0].coords) +
-								list(splitBoundary[-1].coords))[:-1])
+		line1 = LineString(list(list(splitBoundary[-1].coords)[:-1]+list(splitBoundary[0].coords)))
+	else:
+		line1 = splitBoundary[0]
+	line2 = splitBoundary[1]
+
 
 	mask1 = Polygon(line1)
 	mask2 = Polygon(line2)
 
-	# Also perform sanity checks here in case the input filter was not effective
-	if (not mask1.is_valid) or (not mask1.is_simple):
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested but resulting polygon are invalid.")
-
-		return []
-
-	if (not mask2.is_valid) or (not mask2.is_simple):
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon split requested but resulting polygon are invalid.")
-
-		return []
 
 	resP1Pol = pPol.intersection(mask1)
 	resP2Pol = pPol.intersection(mask2)
+
+	if type(resP1Pol) is not Polygon:
+		return []
+	if type(resP2Pol) is not Polygon:
+		return []
+	if not resP1Pol.is_valid:
+		return []
+	if not resP2Pol.is_valid:
+		return []
 
 	# The results of the intersection are Shapely objects. Convert them to list.
 	resP1 = convert_to_canonical(resP1Pol)
@@ -296,7 +206,7 @@ if __name__ == '__main__':
 
 	global DEBUG_LEVEL
 	# If package is launched from cmd line, run sanity checks
-	DEBUG_LEVEL = 4
+	DEBUG_LEVEL = 0
 
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	e = [(0, 0), (1, 1)]
@@ -343,6 +253,18 @@ if __name__ == '__main__':
 	e = [(0.2, 0), (0.2, 1)]
 	result = "PASS" if not  polygon_split(P, e) else "FAIL"
 	print("[%s] Split line crosses a hole."%result)
+
+	P = [[(0, 0), (0.5, 0.5), (1, 0), (1, 1), (0, 1)], []]
+	e = [(0, 0), (1, 0)]
+	result = "PASS" if not  polygon_split(P, e) else "FAIL"
+	print("[%s] Split line on the outside 1."%result)
+
+	P = [[(0, 0), (0.5, 0.5), (1, 0), (1, 1), (0, 1)], []]
+	e = [(0, 0), (0.014, 1.1)]
+	result = "PASS" if not  polygon_split(P, e) else "FAIL"
+	print("[%s] Split line on the outside 2."%result)
+
+
 
 	# Now, do actual functional tests
 	P = [[(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)],
@@ -403,3 +325,8 @@ if __name__ == '__main__':
 	P1, P2 = polygon_split(P, e)
 	pretty_print_poly(P1)
 	pretty_print_poly(P2)
+
+
+	P = [(0.9285714285714286, 1.785714285714285), (0.8333333333333334, 0.1666666666666667), (1.0, 0.0), (2.0, 0.0), (1.681818181818182, 1.863636363636363), (3.0, 2.0), (2.0, 3.0), (1.0, 3.0), (0.9285714285714286, 1.785714285714285)]
+	e = [(2.711344240884324, 1.970139059401827), (1.722081099006799, 1.627810705817321)]
+	#print polygon_split(P, e)

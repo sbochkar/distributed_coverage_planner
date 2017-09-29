@@ -29,7 +29,7 @@ GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
 DEBUG = []
 NUM_SAMPLES = 10
-NUM_ITERATIONS = 20
+NUM_ITERATIONS = 5
 RADIUS = 0.2
 LINEAR_PENALTY = 1.0
 ANGULAR_PENALTY = 10*1.0/360
@@ -51,7 +51,7 @@ def pretty_print_decomposition(decomposition):
 
 
 # Since my decompositionosition tehcnique is lacking, start by hard coding the polygons and decompositionositions
-POLY_ID = 1
+POLY_ID = 5
 orig_poly, sites, decomposition = gen_poly_and_decomp(poly_id=POLY_ID)
 
 # Compute shared edges and site assignment

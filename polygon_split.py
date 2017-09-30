@@ -129,6 +129,7 @@ def polygon_split(polygon=[], splitLine=[]):
 	# This calculates the points on the boundary where the split will happen.
 	commonPts = extrLineLR.intersection(splitLineLS)
 	if DEBUG_LEVEL & 0x8:
+		print("Cut line: %s"%splitLineLS)
 		print("Cut intersects boundary at: %s"%commonPts)
 
 
@@ -161,7 +162,8 @@ def polygon_split(polygon=[], splitLine=[]):
  	if len(splitBoundary) > 3 or len(splitBoundary) < 2:
  		return []
 
-
+	if DEBUG_LEVEL & 0x8:
+		print("Boudanry is split: %s"%splitBoundary)
 
 	# Even though we use LinearRing, there is no wrap around and diff produces
 	#	3 strings. Need to union. Not sure if combining 1st and last strings 
@@ -178,9 +180,14 @@ def polygon_split(polygon=[], splitLine=[]):
 	line2 = splitBoundary[1]
 
 
+	if len(line1.coords) < 3 or len(line2.coords) < 3:
+		return []
+
 	mask1 = Polygon(line1)
 	mask2 = Polygon(line2)
 
+	if (not mask1.is_valid) or (not mask2.is_valid):
+		return []
 
 	resP1Pol = pPol.intersection(mask1)
 	resP2Pol = pPol.intersection(mask2)
@@ -206,7 +213,7 @@ if __name__ == '__main__':
 
 	global DEBUG_LEVEL
 	# If package is launched from cmd line, run sanity checks
-	DEBUG_LEVEL = 0
+	DEBUG_LEVEL = 0x0
 
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	e = [(0, 0), (1, 1)]
@@ -284,27 +291,37 @@ if __name__ == '__main__':
 			result = "FAIL"
 		if set(P2[0]) != set([(0.5, 1.0),  (0.0, 1.0),  (0.0, 0.0),  (0.2, 0.8)]):
 			result = "FAIL"
-		print("[%s] Simple valid split test."%result)
+	else:
+		result = "FAIL"
+	print("[%s] Simple valid split test."%result)
 
 
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	e = [(0, 0.2), (1, 0.2)]
-	P1, P2 = polygon_split(P, e)
-	result = "PASS"
-	if set(P1[0]) != set([(1.0, 0.0),  (1.0, 0.2),  (0.0, 0.2),  (0.0, 0.0)]):
-		result = "FAIL"
-	if set(P2[0]) != set([(1.0, 1.0),  (0.0, 1.0),  (0.0, 0.2),  (1.0, 0.2)]):
+	result = polygon_split(P, e)
+	if result:
+		P1, P2 = result
+		result = "PASS"
+		if set(P1[0]) != set([(1.0, 0.0),  (1.0, 0.2),  (0.0, 0.2),  (0.0, 0.0)]):
+			result = "FAIL"
+		if set(P2[0]) != set([(1.0, 1.0),  (0.0, 1.0),  (0.0, 0.2),  (1.0, 0.2)]):
+			result = "FAIL"
+	else:
 		result = "FAIL"
 	print("[%s] Simple valid split test."%result)
 
 
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	e = [(0.2, 0), (0, 0.2)]
-	P1, P2 = polygon_split(P, e)
-	result = "PASS"
-	if set(P1[0]) != set([(0.2, 0.0),  (0.0, 0.2),  (0.0, 0.0)]):
-		result = "FAIL"
-	if set(P2[0]) != set([(1.0, 0.0),  (1.0, 1.0),  (0.0, 1.0),  (0.0, 0.2),  (0.2, 0.0)]):
+	result = polygon_split(P, e)
+	if result:
+		P1, P2 = result
+		result = "PASS"
+		if set(P1[0]) != set([(0.2, 0.0),  (0.0, 0.2),  (0.0, 0.0)]):
+			result = "FAIL"
+		if set(P2[0]) != set([(1.0, 0.0),  (1.0, 1.0),  (0.0, 1.0),  (0.0, 0.2),  (0.2, 0.0)]):
+			result = "FAIL"
+	else:
 		result = "FAIL"
 	print("[%s] Simple valid split test."%result)
 
@@ -323,10 +340,58 @@ if __name__ == '__main__':
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	e = [(0, 0.2), (0.2, 0)]
 	P1, P2 = polygon_split(P, e)
-	pretty_print_poly(P1)
-	pretty_print_poly(P2)
+	#pretty_print_poly(P1)
+	#pretty_print_poly(P2)
 
 
-	P = [(0.9285714285714286, 1.785714285714285), (0.8333333333333334, 0.1666666666666667), (1.0, 0.0), (2.0, 0.0), (1.681818181818182, 1.863636363636363), (3.0, 2.0), (2.0, 3.0), (1.0, 3.0), (0.9285714285714286, 1.785714285714285)]
+	# Stability test where a lot of cuts are performed on one polygon
+	P = [[(0.9285714285714286, 1.785714285714285), (0.8333333333333334, 0.1666666666666667), (1.0, 0.0), (2.0, 0.0), (1.681818181818182, 1.863636363636363), (3.0, 2.0), (2.0, 3.0), (1.0, 3.0), (0.9285714285714286, 1.785714285714285)], []]
 	e = [(2.711344240884324, 1.970139059401827), (1.722081099006799, 1.627810705817321)]
-	#print polygon_split(P, e)
+	
+	polyExterior = Polygon(*P).exterior
+	from numpy import linspace
+	from itertools import product
+	searchDistances = list(linspace(0, polyExterior.length, 0))
+
+	searchSpace = []
+	for distance in searchDistances:
+		solutionCandidate = polyExterior.interpolate(distance)
+		searchSpace.append((solutionCandidate.x, solutionCandidate.y))
+	for cutEdge in product(searchSpace, repeat=2):
+
+		result = polygon_split(P, cutEdge)
+
+
+
+	# Stability test where a lot of cuts are performed on one polygon
+	P = [[(0, 0),
+		  (3, 1),
+		  (3, 0),
+		  (4, 1),
+		  (5, 0),
+		  (5, 1),
+		  (7, 1),
+		  (5, 2),
+		  (7, 3),
+		  (0, 4),
+		  (0, 2.5),
+		  (1, 2),
+		  (0, 1.5),
+		  (1, 1),
+		  (0, 0.5)], [[(3, 2), (3, 3), (4, 3), (4, 2)]]]
+	
+	polyExterior = Polygon(*P).exterior
+	from numpy import linspace
+	from itertools import product
+	searchDistances = list(linspace(0, polyExterior.length, 500))
+
+	searchSpace = []
+	for distance in searchDistances:
+		solutionCandidate = polyExterior.interpolate(distance)
+		searchSpace.append((solutionCandidate.x, solutionCandidate.y))
+	successCount = 0
+	for cutEdge in product(searchSpace, repeat=2):
+		result = polygon_split(P, cutEdge)
+		if not result:
+			successCount += 1
+	print successCount

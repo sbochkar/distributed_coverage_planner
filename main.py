@@ -57,8 +57,15 @@ def distributed_planner(polyId = 0, numReoptIters = 10):
 	print("New costs: %s"%newCosts)
 
 
-	# Now perform min alt decomposition for every robot
-	
+	# For this step, need to implement minimum altitude decomposition
+	# For now, just plan a path for each robot
+	minAltDecomposition = []
+	for polygon in decomposition:
+
+		#from reflex import find_reflex_vertices
+		#reflexVerts = reflex.find_reflex_vertices(P)
+		#compute_min_alt_cut(polygon, reflexVertex)
+		#minAltDecomposition.append(min_alt(polygon))
 
 
 

@@ -19,7 +19,7 @@ GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
 DEBUG = []
 NUM_SAMPLES = 10
-NUM_ITERATIONS = 5
+NUM_REOPT_ITERATIONS = 0
 RADIUS = 0.2
 LINEAR_PENALTY = 1.0
 ANGULAR_PENALTY = 10*1.0/360
@@ -59,13 +59,27 @@ def distributed_planner(polyId = 0, numReoptIters = 10):
 
 	# For this step, need to implement minimum altitude decomposition
 	# For now, just plan a path for each robot
-	minAltDecomposition = []
-	for polygon in decomposition:
+	#minAltDecomposition = []
+	#for polygon in decomposition:
 
 		#from reflex import find_reflex_vertices
 		#reflexVerts = reflex.find_reflex_vertices(P)
 		#compute_min_alt_cut(polygon, reflexVertex)
 		#minAltDecomposition.append(min_alt(polygon))
+
+
+
+	# Start visuals
+	# Initialize plotting tools
+	ax = splot.init_axis()
+
+	# Populate the drawing canvas
+	splot.plot_polygon_outline(ax, polygon)
+	splot.plot_decomposition(ax, decomposition)
+	splot.plot_init_poss_and_assignment(ax, cellToSiteMap)
+
+	# Send the plot command
+	splot.display()
 
 
 
@@ -81,16 +95,15 @@ def distributed_planner(polyId = 0, numReoptIters = 10):
 #single_planner.single_planner(decomposition, radius, orig_poly, cellToSiteMap)
 
 #Initialize plotting tools
-#ax = splot.init_axis()
-#splot.plot_polygon_outline(ax, orig_poly)
-#splot.plot_decompositionosition(ax, decomposition, adj_matrix, orig_poly)
-#splot.plot_init_poss_and_assignment(ax, sites, cellToSiteMap, decomposition)
+
+
+
 #splot.plot_samples(ax, segments)
 #splot.plot_tour_dubins(ax, tour, mapping, RADIUS/2)
 #splot.display()
 
 if __name__ == '__main__':
 
-	POLY_ID = 1
+	POLY_ID = 3
 	# If package is launched from cmd line, run sanity checks
-	distributed_planner(POLY_ID)
+	distributed_planner(POLY_ID, NUM_REOPT_ITERATIONS)

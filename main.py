@@ -18,8 +18,9 @@ from reoptimizer import chi_reoptimize
 GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
 DEBUG = []
+POLY_ID = 6
 NUM_SAMPLES = 10
-NUM_REOPT_ITERATIONS = 0
+NUM_REOPT_ITERATIONS = 5
 RADIUS = 0.2
 LINEAR_PENALTY = 1.0
 ANGULAR_PENALTY = 10*1.0/360
@@ -39,6 +40,7 @@ def pretty_print_decomposition(decomposition):
 
 def distributed_planner(polyId = 0, numReoptIters = 10):
 	polygon, cellToSiteMap, decomposition = gen_poly_and_decomp(polyId)
+	oldDecomposition = list(decomposition)
 
 	oldCosts = []
 	newCosts = []
@@ -71,12 +73,18 @@ def distributed_planner(polyId = 0, numReoptIters = 10):
 
 	# Start visuals
 	# Initialize plotting tools
-	ax = splot.init_axis()
+	axOld = splot.init_axis("Original Decomposition", "+0+100")
+	axNew = splot.init_axis("Reoptimized Decomposition", "+700+100")
 
 	# Populate the drawing canvas
-	splot.plot_polygon_outline(ax, polygon)
-	splot.plot_decomposition(ax, decomposition)
-	splot.plot_init_poss_and_assignment(ax, cellToSiteMap)
+	splot.plot_polygon_outline(axOld, polygon)
+	splot.plot_polygon_outline(axNew, polygon)
+
+	splot.plot_decomposition(axOld, oldDecomposition)
+	splot.plot_decomposition(axNew, decomposition)
+
+	splot.plot_init_pos_and_assignment(axOld, cellToSiteMap, oldDecomposition)
+	splot.plot_init_pos_and_assignment(axNew, cellToSiteMap, decomposition)
 
 	# Send the plot command
 	splot.display()
@@ -104,6 +112,5 @@ def distributed_planner(polyId = 0, numReoptIters = 10):
 
 if __name__ == '__main__':
 
-	POLY_ID = 3
 	# If package is launched from cmd line, run sanity checks
 	distributed_planner(POLY_ID, NUM_REOPT_ITERATIONS)

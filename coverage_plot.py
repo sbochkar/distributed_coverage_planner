@@ -3,7 +3,7 @@ from shapely.geometry import Polygon
 from descartes import PolygonPatch
 
 
-def init_axis():
+def init_axis(title = '', geometry = ''):
 	"""
 	Initializes plotting area and returns a handle for plot area
 	:param None:
@@ -14,8 +14,16 @@ def init_axis():
 	ax = fig.add_subplot(111)
 	plt.axis("equal")
 
+	mngr = plt.get_current_fig_manager()
+	#mngr.window.setGeometry(50,100,640, 545)
+	mngr.window.wm_geometry(geometry)
+
 	ax.get_yaxis().set_ticks([])
 	ax.get_xaxis().set_ticks([])
+
+	ax.set_title(title)
+
+
 
 	return ax
 
@@ -77,21 +85,44 @@ def plot_decomposition(ax, decomposition):
 		#ax.annotate(i, (centroid.x, centroid.y))
 
 
-def plot_init_poss_and_assignment(ax, cellToSiteMap):
+def plot_init_pos_and_assignment(ax, cellToSiteMap, decomposition):
 	"""
 	Function plots initial positions of the robots
 	:param ax: Axis object for redundancy
+	:param cellToSiteMap: A dict mapping a robot to its starting location
 	:param decomposition: A list of polygons comprosing a decomposition
 	:return: None
 	"""
 
 	colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
 	for idx, position in cellToSiteMap.items():
+		
+		polygonShapely = Polygon(*decomposition[idx])
+		x, y = polygonShapely.exterior.xy
+
+		# Fist plot the initial position as dots
 		ax.scatter(*position,
 					color = colors[idx],
 					alpha = 0.9,
 					linewidth = 10,
 					zorder = 1)	
+		# Then plot the barely visible patches representing
+		#	assignments.
+		patch = PolygonPatch(polygonShapely,
+							 alpha = 0.1,
+						 	 fc = colors[idx],
+						 	 ec = '#6699cc',
+						 	 linewidth = 3,
+						 	 linestyle = 'solid',
+						 	 zorder = 1,
+						 	 fill = True)
+		ax.add_patch(patch)
+
+
+
+
+
+
 
 
 def plot_main_polygon(ax, polygon):
@@ -112,9 +143,6 @@ def plot_main_polygon(ax, polygon):
 	#ax.plot(x,y)
 	ax.set_xlim([min_x-0.5,max_x+0.5])
 	ax.set_ylim([min_y-0.5,max_y+0.5])
-
-
-
 
 
 def plot_init_poss(ax, segments):

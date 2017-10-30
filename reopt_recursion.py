@@ -17,7 +17,10 @@ DEBUG_LEVEL = 0
 def dft_recursion(decomposition=[],
 				  adjacencyMatrix=[],
 				  maxVertexIdx=0,
-				  cellToSiteMap=[]):
+				  cellToSiteMap=[],
+				  radius = 0.1,
+				  linPenalty = 1.0,
+				  angPenalty = 10*1.0/360):
 	"""
 	This is a recursive function that explores all pairs of cells starting with
 	one with the highest cost. The purpose is to re-optimize cuts of adjacent
@@ -38,9 +41,9 @@ def dft_recursion(decomposition=[],
 
 	maxVertexCost = compute_chi(polygon = decomposition[maxVertexIdx],
 								initPos = cellToSiteMap[maxVertexIdx],
-								radius = RADIUS,
-								linPenalty = LINEAR_PENALTY,
-								angPenalty = ANGULAR_PENALTY)
+								radius = radius,
+								linPenalty = linPenalty,
+								angPenalty = angPenalty)
 
 	if DEBUG_LEVEL & 0x8:
 		print("Cell %d has maximum cost of : %f"%(maxVertexIdx, maxVertexCost))
@@ -59,9 +62,9 @@ def dft_recursion(decomposition=[],
 	for cellIdx in surroundingCellIdxs:
 		cost = compute_chi(polygon = decomposition[cellIdx],
 						   initPos = cellToSiteMap[cellIdx],
-						   radius = RADIUS,
-						   linPenalty = LINEAR_PENALTY,
-						   angPenalty = ANGULAR_PENALTY)
+						   radius = radius,
+						   linPenalty = linPenalty,
+						   angPenalty = angPenalty)
 		surroundingChiCosts.append((cellIdx, cost))
 
 
@@ -103,10 +106,40 @@ def dft_recursion(decomposition=[],
 											  polygonB = decomposition[cellIdx],
 											  robotAInitPos = cellToSiteMap[maxVertexIdx],
 											  robotBInitPos = cellToSiteMap[cellIdx],
-											  nrOfSamples = 100)
+											  nrOfSamples = 100,
+											  radius = radius,
+											  linPenalty = linPenalty,
+											  angPenalty = angPenalty)
 
 			if result:
-				decomposition[maxVertexIdx], decomposition[cellIdx] = result
+				# Resolve cell-robot assignments here.
+				# This is to avoid the issue of cell assignments that
+				# don't make any sense after polygon cut.
+				chiA0 = compute_chi(polygon = result[0],
+								   	initPos = cellToSiteMap[maxVertexIdx],
+								   	radius = radius,
+								   	linPenalty = linPenalty,
+								   	angPenalty = angPenalty)
+				chiA1 = compute_chi(polygon = result[1],
+								   	initPos = cellToSiteMap[maxVertexIdx],
+								   	radius = radius,
+								   	linPenalty = linPenalty,
+								   	angPenalty = angPenalty)
+				chiB0 = compute_chi(polygon = result[0],
+								   	initPos = cellToSiteMap[cellIdx],
+								   	radius = radius,
+								   	linPenalty = linPenalty,
+								   	angPenalty = angPenalty)							   	
+				chiB1 = compute_chi(polygon = result[1],
+								   	initPos = cellToSiteMap[cellIdx],
+								   	radius = radius,
+								   	linPenalty = linPenalty,
+								   	angPenalty = angPenalty)
+
+				if max(chiA0, chiB1) <= max(chiA1, chiB0):
+					decomposition[maxVertexIdx], decomposition[cellIdx] = result
+				else:
+					decomposition[cellIdx], decomposition[maxVertexIdx] = result
 
 				if DEBUG_LEVEL & 0x8:
 					print("Cells %d and %d reopted."%(maxVertexIdx, cellIdx))
@@ -118,7 +151,10 @@ def dft_recursion(decomposition=[],
 				if dft_recursion(decomposition = decomposition,
 								 adjacencyMatrix = adjacencyMatrix,
 								 maxVertexIdx = cellIdx,
-								 cellToSiteMap = cellToSiteMap):
+								 cellToSiteMap = cellToSiteMap,
+								 radius = radius,
+								 linPenalty = linPenalty,
+								 angPenalty = angPenalty):
 					break
 	return False
 

@@ -40,9 +40,7 @@ def chi_reoptimize(decomposition = [],
 		chiCosts.append((idx, cost))
 
 	sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
-	for item in sortedChiCosts:
-		originalChiCosts.append(item)
-
+	originalChiCosts.extend(sortedChiCosts)
 
 	for i in range(numIterations):
 		chiCosts = []
@@ -63,9 +61,12 @@ def chi_reoptimize(decomposition = [],
 		if not dft_recursion(decomposition,
 							 adjacencyMatrix,
 							 sortedChiCosts[0][0],
-							 cellToSiteMap):
+							 cellToSiteMap,
+							 radius,
+				   			 linPenalty,
+				   			 angPenalty):
 			if DEBUG_LEVEL & 0x2:
-				print("Iteration: %3d/%3d No cut was made!"%(i, numIterations))
+				print("Iteration: %3d/%3d: No cut was made!"%(i, numIterations))
 
 	# Output new sorted costgs
 	chiCosts = []
@@ -77,8 +78,7 @@ def chi_reoptimize(decomposition = [],
 						   angPenalty = angPenalty)
 		chiCosts.append((idx, cost))
 	sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
-	for item in sortedChiCosts:
-		newChiCosts.append(item)
+	newChiCosts.extend(sortedChiCosts)
 
 
 if __name__ == '__main__':

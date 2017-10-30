@@ -55,7 +55,10 @@ def compute_pairwise_optimal(polygonA=[],
 							 polygonB=[],
 							 robotAInitPos=[],
 							 robotBInitPos=[],
-							 nrOfSamples=100):
+							 nrOfSamples=100,
+							 radius = 0.1,
+							 linPenalty = 1.0,
+							 angPenalty = 10*1.0/360):
 	"""
 	Takes two adjacent polygons and attempts to modify the shared edge such that
 	the metric chi is reduced.
@@ -157,18 +160,18 @@ def compute_pairwise_optimal(polygonA=[],
 	# Record the costs at this point
 	chiL = compute_chi(polygon = polygonA,
 						initPos = robotAInitPos,
-						radius = RADIUS,
-						linPenalty = LINEAR_PENALTY,
-						angPenalty = ANGULAR_PENALTY)
+						radius = radius,
+						linPenalty = linPenalty,
+						angPenalty = angPenalty)
 	chiR = compute_chi(polygon = polygonB,
 						initPos = robotBInitPos,
-						radius = RADIUS,
-						linPenalty = LINEAR_PENALTY,
-						angPenalty = ANGULAR_PENALTY)
+						radius = radius,
+						linPenalty = linPenalty,
+						angPenalty = angPenalty)
 
 	initMaxChi = max(chiL, chiR)
 
-	minMaxChi = 10e10
+	minMaxChiFinal = 10e10
 	minCandidate = []
 
 	# This search is over any two pairs of samples points on the exterior
@@ -188,27 +191,43 @@ def compute_pairwise_optimal(polygonA=[],
 				print("%s Split Line: %s"%("BAD ", cutEdge))
 
 		if result:
-			chiL = compute_chi(polygon = result[0],
-								initPos = robotAInitPos,
-								radius = RADIUS,
-								linPenalty = LINEAR_PENALTY,
-								angPenalty = ANGULAR_PENALTY)
-			chiR = compute_chi(polygon = result[1],
-								initPos = robotBInitPos,
-								radius = RADIUS,
-								linPenalty = LINEAR_PENALTY,
-								angPenalty = ANGULAR_PENALTY)
+			# Resolve cell-robot assignments here.
+			# This is to avoid the issue of cell assignments that
+			# don't make any sense after polygon cut.
+			chiA0 = compute_chi(polygon = result[0],
+							   	initPos = robotAInitPos,
+							   	radius = radius,
+							   	linPenalty = linPenalty,
+							   	angPenalty = angPenalty)
+			chiA1 = compute_chi(polygon = result[1],
+							   	initPos = robotAInitPos,
+							   	radius = radius,
+							   	linPenalty = linPenalty,
+							   	angPenalty = angPenalty)
+			chiB0 = compute_chi(polygon = result[0],
+							   	initPos = robotBInitPos,
+							   	radius = radius,
+							   	linPenalty = linPenalty,
+							   	angPenalty = angPenalty)							   	
+			chiB1 = compute_chi(polygon = result[1],
+							   	initPos = robotBInitPos,
+							   	radius = radius,
+							   	linPenalty = linPenalty,
+							   	angPenalty = angPenalty)
 
-			maxChi = max(chiL, chiR)
-			if maxChi <= minMaxChi:
+			maxChiCases = [max(chiA0, chiB1),
+					  	   max(chiA1, chiB0)]
+
+			minMaxChi = min(maxChiCases)
+			if minMaxChi <= minMaxChiFinal:
 				minCandidate = cutEdge
-				minMaxChi = maxChi
+				minMaxChiFinal = minMaxChi
 
 	if DEBUG_LEVEL & 0x8:
-		print("Computed min max chi as: %4.2f"%minMaxChi)
+		print("Computed min max chi as: %4.2f"%minMaxChiFinal)
 		print("Cut: %s"%(minCandidate, ))
 
-	if initMaxChi < minMaxChi:
+	if initMaxChi < minMaxChiFinal:
 		if DEBUG_LEVEL & 0x8:
 			print("No cut results in minimum altitude")
 	

@@ -1,13 +1,6 @@
-import numpy as np
-from operator import itemgetter
-
-from shapely.geometry import LineString
-from shapely.geometry import LinearRing
-
 import coverage_plot as splot
+
 from polygons import gen_poly_and_decomp
-
-
 from decomposition_processing import compute_adjacency
 from chi import compute_chi
 from reopt_recursion import dft_recursion
@@ -17,10 +10,9 @@ from reoptimizer import chi_reoptimize
 
 GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
-DEBUG = []
-POLY_ID = 6
+POLY_ID = 3
 NUM_SAMPLES = 10
-NUM_REOPT_ITERATIONS = 5
+NUM_REOPT_ITERATIONS = 1
 RADIUS = 0.2
 LINEAR_PENALTY = 1.0
 ANGULAR_PENALTY = 10*1.0/360
@@ -39,6 +31,10 @@ def pretty_print_decomposition(decomposition):
 
 
 def distributed_planner(polyId = 0, numReoptIters = 10):
+	# Assume that robots are assigned to the cells nearest to them.
+	# Otherwise, we can just run matching algorithm.
+	# Todo: Implement the matching algorithm to find the best matching
+	#       at every iteration that results in lower cost.
 	polygon, cellToSiteMap, decomposition = gen_poly_and_decomp(polyId)
 	oldDecomposition = list(decomposition)
 

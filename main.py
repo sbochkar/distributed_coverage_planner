@@ -1,45 +1,28 @@
-import numpy as np
-from operator import itemgetter
-from shapely.geometry import LineString
-
 import coverage_plot as splot
-from polygons import gen_poly_and_decomp
 
-from anchored_decomposition import anchored_decomposition
-from anchored_decomposition import assign_sites_to_polygon
+from polygons import gen_poly_and_decomp
+from decomposition_processing import compute_adjacency
+from chi import compute_chi
+from reopt_recursion import dft_recursion
 from polygon_area import polygon_area
-from convex_divide import convex_divide
-import adjacency as adj
-import min_alt_discrt as discrt
-import chi
-import min_alt_decompose as mad
-import operations as op
-import reflex
-import cuts
-import altitude as alt
-import get_mapping
-import dubins_cost
-import solver
-import single_planner
-from new_funks import pair_wise_reoptimization
-from new_funks import reopt_recursion
-from new_funks import reopt_recursion_BFT
-from shapely.geometry import LinearRing
+from reoptimizer import chi_reoptimize
+
 
 GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
-DEBUG = []
+POLY_ID = 3
 NUM_SAMPLES = 10
+NUM_REOPT_ITERATIONS = 1
 RADIUS = 0.2
-LIN_PENALTY = 1.0
+LINEAR_PENALTY = 1.0
 ANGULAR_PENALTY = 10*1.0/360
+DEBUG_LEVEL = 0
 
 
 
-
-def pretty_print_decomp(decomp):
-	print("[..] Decomposition:")
-	for idx, poly in enumerate(decomp):
+def pretty_print_decomposition(decomposition):
+	print("[..] decompositionosition:")
+	for idx, poly in enumerate(decomposition):
 		print("%2d: "%idx),
 		boundary = poly[0]
 		for elem in boundary:
@@ -47,110 +30,83 @@ def pretty_print_decomp(decomp):
 		print("\n"),
 
 
+def distributed_planner(polyId = 0, numReoptIters = 10):
+	# Assume that robots are assigned to the cells nearest to them.
+	# Otherwise, we can just run matching algorithm.
+	# Todo: Implement the matching algorithm to find the best matching
+	#       at every iteration that results in lower cost.
+	polygon, cellToSiteMap, decomposition = gen_poly_and_decomp(polyId)
+	oldDecomposition = list(decomposition)
+
+	oldCosts = []
+	newCosts = []
+
+	print("Reoptimizing polygon: %3d"%polyId)
+	print("Attempting %d reoptimization iterations."%numReoptIters)
+	chi_reoptimize(decomposition,
+				   cellToSiteMap,
+				   oldCosts,
+				   newCosts,
+				   numIterations = numReoptIters,
+				   radius = 0.1,
+				   linPenalty = 1.0,
+				   angPenalty = 10*1.0/360)
+	print("Old costs: %s"%oldCosts)
+	print("New costs: %s"%newCosts)
+
+
+	# For this step, need to implement minimum altitude decomposition
+	# For now, just plan a path for each robot
+	#minAltDecomposition = []
+	#for polygon in decomposition:
+
+		#from reflex import find_reflex_vertices
+		#reflexVerts = reflex.find_reflex_vertices(P)
+		#compute_min_alt_cut(polygon, reflexVertex)
+		#minAltDecomposition.append(min_alt(polygon))
 
 
 
-# Since my decomposition tehcnique is lacking, start by hard coding the polygons and decompositions
-POLY_ID = 7
-orig_poly, sites, decomp = gen_poly_and_decomp(poly_id=POLY_ID)
+	# Start visuals
+	# Initialize plotting tools
+	axOld = splot.init_axis("Original Decomposition", "+0+100")
+	axNew = splot.init_axis("Reoptimized Decomposition", "+700+100")
 
-# Compute shared edges and site assignment
-cell_to_site_map = assign_sites_to_polygon(decomp, sites)
-#cell_to_site_map = {0: (10,0), 1:(10,1), 2:(0,1), 3:(0,0)}
-if DEBUG: 
-	print("[.] Cell to Site Map: %s."%cell_to_site_map)
+	# Populate the drawing canvas
+	splot.plot_polygon_outline(axOld, polygon)
+	splot.plot_polygon_outline(axNew, polygon)
 
-adj_matrix = adj.get_adjacency_as_matrix(decomp)
+	splot.plot_decomposition(axOld, oldDecomposition)
+	splot.plot_decomposition(axNew, decomposition)
 
+	splot.plot_init_pos_and_assignment(axOld, cellToSiteMap, oldDecomposition)
+	splot.plot_init_pos_and_assignment(axNew, cellToSiteMap, decomposition)
 
-# Display the original costs
-chi_costs = []
-for idx, poly in enumerate(decomp):
-	cost = chi.chi(polygon=decomp[idx], init_pos=cell_to_site_map[idx],
-					radius=RADIUS, lin_penalty=LIN_PENALTY,
-					angular_penalty=ANGULAR_PENALTY)
-	chi_costs.append((idx, cost))
-chi_costs_sorted = sorted(chi_costs, key=lambda v:v[1], reverse=True)
-print("[.] Original costs: %s"%chi_costs_sorted)
-
-
-for idx, poly in enumerate(decomp):
-	if not LinearRing(poly[0]).is_simple:
-		print("[!!!!!] WHYWYYWEHWYEEHGW")
-		print idx
+	# Send the plot command
+	splot.display()
 
 
 
-M = 20
-iterations = 0
-while iterations < M:
-	iterations += 1
 
 
-
-	chi_costs = []
-	for idx, poly in enumerate(decomp):
-		cost = chi.chi(polygon=decomp[idx], init_pos=cell_to_site_map[idx],
-						radius=RADIUS, lin_penalty=LIN_PENALTY,
-						angular_penalty=ANGULAR_PENALTY)
-		chi_costs.append((idx, cost))
-	chi_costs_sorted = sorted(chi_costs, key=lambda v:v[1], reverse=True)
-	if DEBUG:
-		print("[.] Old costs: %s"%chi_costs_sorted)
-
-	# Begin the recursion process
-	mad.collinear_correction(decomp)
-	mad.post_processs_decomposition(decomp)
-	adj_matrix = adj.get_adjacency_as_matrix(decomp)
-
-	reopt_recursion.level = 0
-	reopt_recursion(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map)
-	#pretty_print_decomp(decomp)
-
-	#q = [chi_costs_sorted[0][0]]
-	#reopt_recursion_BFT(decomp, adj_matrix, chi_costs_sorted[0][0], cell_to_site_map, q)
-	#if DEBUG:
-
-for idx, poly in enumerate(decomp):
-	if not LinearRing(poly[0]).is_simple:
-		print("[!!!!!] WHYWYYWEHWYEEHGW")
-		print idx
-#pretty_print_decomp(decomp)
-#cell_to_site_map = {3: (10,10), 1:(0,0), 2:(10,0), 0:(0,10)}
-
-# Print the refined costs
-chi_costs = []
-for idx, poly in enumerate(decomp):
-	cost = chi.chi(polygon=decomp[idx], init_pos=cell_to_site_map[idx],
-					radius=RADIUS, lin_penalty=LIN_PENALTY,
-					angular_penalty=ANGULAR_PENALTY)
-	chi_costs.append((idx, cost))
-chi_costs_sorted = sorted(chi_costs, key=lambda v:v[1], reverse=True)
-print("[.] New costs: %s"%chi_costs_sorted)
-
-
-
-print("[..] Plotting the original polygon and sites.")
-mad.collinear_correction(decomp)
-mad.post_processs_decomposition(decomp)
-adj_matrix = adj.get_adjacency_as_matrix(decomp)
-
-
-
-#segments = discrt.discritize_set(decomp, RADIUS)
+#segments = discrt.discritize_set(decomposition, radius)
 #mapping = get_mapping.get_mapping(segments)
-#cost_matrix, cluster_list = dubins_cost.compute_costs(orig_poly, mapping, RADIUS/2)
+#cost_matrix, cluster_list = dubins_cost.compute_costs(orig_poly, mapping, radius/2)
 #solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
 #tour = solver.read_tour("cpp_test")
-#print cell_to_site_map
+#print cellToSiteMap
 
-single_planner.single_planner(decomp, RADIUS, orig_poly, cell_to_site_map)
+#single_planner.single_planner(decomposition, radius, orig_poly, cellToSiteMap)
 
 #Initialize plotting tools
-#ax = splot.init_axis()
-#splot.plot_polygon_outline(ax, orig_poly)
-#splot.plot_decomposition(ax, decomp, adj_matrix, orig_poly)
-#splot.plot_init_poss_and_assignment(ax, sites, cell_to_site_map, decomp)
+
+
+
 #splot.plot_samples(ax, segments)
 #splot.plot_tour_dubins(ax, tour, mapping, RADIUS/2)
 #splot.display()
+
+if __name__ == '__main__':
+
+	# If package is launched from cmd line, run sanity checks
+	distributed_planner(POLY_ID, NUM_REOPT_ITERATIONS)

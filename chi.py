@@ -7,7 +7,7 @@ from shapely.geometry import MultiPolygon
 
 from polygon_area import polygon_area
 
-def chi(polygon=[[],[]], init_pos=(0,0), radius=1, lin_penalty=1.0, angular_penalty=1.0):
+def compute_chi(polygon=[[],[]], initPos=(0,0), radius=1, linPenalty=1.0, angPenalty=1.0):
 	"""
 	Metric chi: Approximation of the cost of a coverage path for a polygon P
 
@@ -19,16 +19,16 @@ def chi(polygon=[[],[]], init_pos=(0,0), radius=1, lin_penalty=1.0, angular_pena
 	"""
 
 
-	F1 = 2*min_dist_to_boundary(polygon, init_pos)
+	F1 = 2*min_dist_to_boundary(polygon, initPos)
 	F2 = polygon_area(polygon)/radius  #O(n)
 	F3 = 360.0*compute_num_contours(polygon=polygon, radius=radius)
 
-	return lin_penalty*(F1+F2)+angular_penalty*F3
+	return linPenalty*(F1+F2)+angPenalty*F3
 
 
-def min_dist_to_boundary(polygon=[[],[]], init_pos=(0,0)):
+def min_dist_to_boundary(polygon=[[],[]], initPos=(0,0)):
 	"""
-	Compute shortest distance from init_pos to vertex of polygon
+	Compute shortest distance from initPos to vertex of polygon
 
 	"""
 
@@ -37,7 +37,7 @@ def min_dist_to_boundary(polygon=[[],[]], init_pos=(0,0)):
 	# Get the distance between closest vertex in boundary of P to q
 	# O(nlogn)
 
-	x, y = init_pos
+	x, y = initPos
 	vertex_dists = sorted([(x-v[0])**2+(y-v[1])**2 for v in boundary])
 	closest_dist = sqrt(vertex_dists[0])
 
@@ -98,6 +98,6 @@ def compute_num_contours(polygon=[[],[]], radius=1):
 #q = (-1,-1)
 #r = 0.5
 
-#print chi(polygon=P, init_pos=q, radius=r, lin_penalty=1.0, angular_penalty=1.0/360.0)
+#print chi(polygon=P, initPos=q, radius=r, lin_penalty=1.0, angular_penalty=1.0/360.0)
 #print polygon_area(polygon=P)/r
 #print compute_num_contours(polygon=P, radius=0.1)

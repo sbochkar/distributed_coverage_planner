@@ -3,21 +3,127 @@ from shapely.geometry import Polygon
 from descartes import PolygonPatch
 
 
-def init_axis():
+def init_axis(title = '', geometry = ''):
 	"""
-	Initializes plotting area
+	Initializes plotting area and returns a handle for plot area
 	:param None:
-	:return: Axes object
+	:return: Axis object
 	"""
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
 	plt.axis("equal")
 
+	mngr = plt.get_current_fig_manager()
+	#mngr.window.setGeometry(50,100,640, 545)
+	mngr.window.wm_geometry(geometry)
+
 	ax.get_yaxis().set_ticks([])
 	ax.get_xaxis().set_ticks([])
 
+	ax.set_title(title)
+
+
+
 	return ax
+
+
+def plot_polygon_outline(ax, polygon, fcIdx = 0):
+	"""
+	Function will plot the ouline of polygon. No decomposition.
+	Adjust the axis as well.
+	:param ax: Axis object for redundancy
+	:param polygon: Possibly with holes
+	:return: None
+	"""
+
+	colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
+	#color_id = ["white","green","red","blue","yellow","pink"]
+
+	polygonShapely = Polygon(*polygon)
+	min_x, min_y, max_x, max_y = polygonShapely.bounds
+
+	patch = PolygonPatch(polygonShapely,
+						 alpha = 1,
+						 fc = colors[fcIdx],
+						 ec = 'black',
+						 linewidth = 3,
+						 linestyle = 'solid',
+						 zorder = 2,
+						 fill = False,
+						 facecolor = "#6699cc",
+						 edgecolor = "#6699cc")
+	
+	ax.add_patch(patch)
+	ax.set_xlim([min_x-0.5,max_x+0.5])
+	ax.set_ylim([min_y-0.5,max_y+0.5])
+
+
+def plot_decomposition(ax, decomposition):
+	"""
+	Function plots a decomposition (aka a list of polygons)
+	:param ax: Axis object for redundancy
+	:param decomposition: A list of polygons comprosing a decomposition
+	:return: None
+	"""
+
+	# Plot individual cells
+	for i, polygon in enumerate(decomposition):
+
+		polygonShapely = Polygon(*polygon)
+		x, y = polygonShapely.exterior.xy
+
+		ax.plot(x,
+				y,
+				color = '#6699cc',
+				alpha = 0.7,
+				linewidth = 3,
+				solid_capstyle = 'round',
+				zorder = 1)
+
+		#centroid = polygonShapely.centroid
+		#ax.annotate(i, (centroid.x, centroid.y))
+
+
+def plot_init_pos_and_assignment(ax, cellToSiteMap, decomposition):
+	"""
+	Function plots initial positions of the robots
+	:param ax: Axis object for redundancy
+	:param cellToSiteMap: A dict mapping a robot to its starting location
+	:param decomposition: A list of polygons comprosing a decomposition
+	:return: None
+	"""
+
+	colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
+	for idx, position in cellToSiteMap.items():
+		
+		polygonShapely = Polygon(*decomposition[idx])
+		x, y = polygonShapely.exterior.xy
+
+		# Fist plot the initial position as dots
+		ax.scatter(*position,
+					color = colors[idx],
+					alpha = 0.9,
+					linewidth = 10,
+					zorder = 1)	
+		# Then plot the barely visible patches representing
+		#	assignments.
+		patch = PolygonPatch(polygonShapely,
+							 alpha = 0.1,
+						 	 fc = colors[idx],
+						 	 ec = '#6699cc',
+						 	 linewidth = 3,
+						 	 linestyle = 'solid',
+						 	 zorder = 1,
+						 	 fill = True)
+		ax.add_patch(patch)
+
+
+
+
+
+
+
 
 def plot_main_polygon(ax, polygon):
 	"""
@@ -37,95 +143,6 @@ def plot_main_polygon(ax, polygon):
 	#ax.plot(x,y)
 	ax.set_xlim([min_x-0.5,max_x+0.5])
 	ax.set_ylim([min_y-0.5,max_y+0.5])
-
-
-def plot_polygon_outline(ax, polygon, fc_idx=0):
-	"""
-	Function will plot the ouline of cleaning area. No decomposition.
-	Adjust the axis as well.
-	:param ax: Axis object for redundancy
-	:param polygon: Possibly with holes
-	:return: None
-	"""
-	colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
-	#color_id = ["white","green","red","blue","yellow","pink"]
-
-	P = Polygon(*polygon)
-	min_x, min_y, max_x, max_y = P.bounds
-
-	#patch = PolygonPatch(P, alpha=0.2, fc=colors[fc_idx], ec='black', linewidth=3, linestyle='dashed',zorder=2) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
-	patch = PolygonPatch(P, alpha=0.2, fc=colors[fc_idx], ec='black', linewidth=3, linestyle='dashed',zorder=2, fill=False) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
-	ax.add_patch(patch)
-
-	#poly_shp = Polygon(*polygon)
-	#centroid = poly_shp.centroid
-	#ax.annotate(fc_idx, (centroid.x, centroid.y))
-
-
-
-	#x, y= P.xy
-	#ax.plot(x,y)
-	ax.set_xlim([min_x-0.5,max_x+0.5])
-	ax.set_ylim([min_y-0.5,max_y+0.5])
-
-
-def plot_decomposition(ax, decomposition, shared_edges, P):
-	"""
-	Function plots the result of the decomposition.
-	:param ax: Axis object for redundancy
-	:param shared_edges: Shared edges between cells
-	:param cvx_set:A list of convex cells:
-	:retur: None
-	"""
-
-	P = Polygon(*P)
-	minx, miny, maxx, maxy = P.bounds
-
-	# Plot individual cells
-#	for i, poly in enumerate(decomposition):
-#
-#		poly_shp = Polygon(*poly)
-#		x, y = poly_shp.exterior.xy
-#		ax.plot(x, y, color='#6699cc', alpha=0.7,
-#				linewidth=3, solid_capstyle='round', zorder=1)
-#
-#		centroid = poly_shp.centroid
-#		#ax.annotate(i, (centroid.x, centroid.y))
-
-	# Plot individual shared edge
-	num_nodes = len(shared_edges)
-	for i in range(num_nodes):
-		for j in range(num_nodes):
-
-			if shared_edges[i][j] is not None:
-				x, y = zip(*shared_edges[i][j])
-				ax.plot(x, y, color='red', alpha=0.5, linewidth=1, zorder=2, marker="o")
-
-#	ax.set_xlim([minx-0.5,maxx+0.5])
-#	ax.set_ylim([miny-0.5,maxy+0.5])
-
-
-def plot_init_poss_and_assignment(ax, segments, cell_to_site_map, decomposition):
-
-	#for poly_id, poly in enumerate(decomposition):
-	#	poly_shp = Polygon(*poly)
-	#	centroid = poly_shp.centroid
-
-	#	site_x, site_y = cell_to_site_map[poly_id]
-	#	#ax.plot([site_x, centroid.x], [site_y, centroid.y], color="green", marker = 'o')
-	#	#ax.annotate(poly_id, (site_x, site_y))
-
-	colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
-	for idx, segment in enumerate(segments):
-
-		ax.scatter(*segment, color=colors[idx], alpha=0.9, linewidth=10, zorder=1)	
-
-	#ax.scatter(*zip(*segments), color='blue', alpha=0.9, linewidth=10, zorder=1)	
-
-	#ax.relim()
-	# update ax.viewLim using the new dataLim
-	ax.autoscale()
-
 
 
 def plot_init_poss(ax, segments):

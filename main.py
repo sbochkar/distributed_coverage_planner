@@ -12,10 +12,10 @@ GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
 POLY_ID = 3
 NUM_SAMPLES = 10
-NUM_REOPT_ITERATIONS = 1
+NUM_REOPT_ITERATIONS = 5
 RADIUS = 0.2
 LINEAR_PENALTY = 1.0
-ANGULAR_PENALTY = 10*1.0/360
+ANGULAR_PENALTY = 100*1.0/360
 DEBUG_LEVEL = 0
 
 
@@ -48,9 +48,9 @@ def distributed_planner(polyId = 0, numReoptIters = 10):
 				   oldCosts,
 				   newCosts,
 				   numIterations = numReoptIters,
-				   radius = 0.1,
-				   linPenalty = 1.0,
-				   angPenalty = 10*1.0/360)
+				   radius = RADIUS,
+				   linPenalty = LINEAR_PENALTY,
+				   angPenalty = ANGULAR_PENALTY)
 	print("Old costs: %s"%oldCosts)
 	print("New costs: %s"%newCosts)
 

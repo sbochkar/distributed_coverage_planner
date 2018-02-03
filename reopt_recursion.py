@@ -155,7 +155,7 @@ def dft_recursion(decomposition=[],
 								 radius = radius,
 								 linPenalty = linPenalty,
 								 angPenalty = angPenalty):
-					break
+					return True
 	return False
 
 

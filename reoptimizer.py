@@ -30,19 +30,49 @@ def chi_reoptimize(decomposition = [],
 		N/A
 	"""
 
-	chiCosts = []
-	for idx, poly in enumerate(decomposition):
-		cost = compute_chi(polygon = decomposition[idx],
-						   initPos = cellToSiteMap[idx],
-						   radius = radius,
-						   linPenalty = linPenalty,
-						   angPenalty = angPenalty)
-		chiCosts.append((idx, cost))
+	# Store perf stats for monitoring performance of the algorithm. 
+	with open("logFile.txt", 'w') as logFile:
+		chiCosts = []
+		for idx, poly in enumerate(decomposition):
+			cost = compute_chi(polygon = decomposition[idx],
+							   initPos = cellToSiteMap[idx],
+							   radius = radius,
+							   linPenalty = linPenalty,
+							   angPenalty = angPenalty)
+			chiCosts.append((idx, cost))
 
-	sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
-	originalChiCosts.extend(sortedChiCosts)
+		sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
+		originalChiCosts.extend(sortedChiCosts)
 
-	for i in range(numIterations):
+		for i in range(numIterations):
+			chiCosts = []
+			for idx, poly in enumerate(decomposition):
+				cost = compute_chi(polygon = decomposition[idx],
+							initPos = cellToSiteMap[idx],
+							radius = radius,
+							linPenalty = linPenalty,
+							angPenalty = angPenalty)
+				chiCosts.append((idx, cost))
+			sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
+	
+			if DEBUG_LEVEL & 0x2:
+				print("Iteration: %3d/%3d: Costs: %s"%(i, numIterations, sortedChiCosts))
+	
+			adjacencyMatrix = compute_adjacency(decomposition)
+	
+			if not dft_recursion(decomposition,
+								 adjacencyMatrix,
+								 sortedChiCosts[0][0],
+								 cellToSiteMap,
+								 radius,
+								 linPenalty,
+								 angPenalty):
+				if DEBUG_LEVEL & 0x2:
+					print("Iteration: %3d/%3d: No cut was made!"%(i, numIterations))
+
+			logFile.write("[%3d]: %s\n"%(i+1, sortedChiCosts))
+
+		# Output new sorted costgs
 		chiCosts = []
 		for idx, poly in enumerate(decomposition):
 			cost = compute_chi(polygon = decomposition[idx],
@@ -52,33 +82,9 @@ def chi_reoptimize(decomposition = [],
 							   angPenalty = angPenalty)
 			chiCosts.append((idx, cost))
 		sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
+		newChiCosts.extend(sortedChiCosts)
 
-		if DEBUG_LEVEL & 0x2:
-			print("Iteration: %3d/%3d: Costs: %s"%(i, numIterations, sortedChiCosts))
-
-		adjacencyMatrix = compute_adjacency(decomposition)
-
-		if not dft_recursion(decomposition,
-							 adjacencyMatrix,
-							 sortedChiCosts[0][0],
-							 cellToSiteMap,
-							 radius,
-				   			 linPenalty,
-				   			 angPenalty):
-			if DEBUG_LEVEL & 0x2:
-				print("Iteration: %3d/%3d: No cut was made!"%(i, numIterations))
-
-	# Output new sorted costgs
-	chiCosts = []
-	for idx, poly in enumerate(decomposition):
-		cost = compute_chi(polygon = decomposition[idx],
-						   initPos = cellToSiteMap[idx],
-						   radius = radius,
-						   linPenalty = linPenalty,
-						   angPenalty = angPenalty)
-		chiCosts.append((idx, cost))
-	sortedChiCosts = sorted(chiCosts, key=lambda v:v[1], reverse=True)
-	newChiCosts.extend(sortedChiCosts)
+		logFile.write("[%3d]: %s\n"%(i+1, sortedChiCosts))
 
 
 if __name__ == '__main__':

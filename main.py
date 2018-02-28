@@ -10,7 +10,7 @@ from reoptimizer import chi_reoptimize
 
 GLKH_LOCATION = "/home//misc/GLKH-1.0/"
 
-POLY_ID = 3
+POLY_ID = 1
 NUM_SAMPLES = 10
 NUM_REOPT_ITERATIONS = 5
 RADIUS = 0.2

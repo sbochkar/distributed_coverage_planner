@@ -19,7 +19,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 
 fileHandler.setFormatter(formatter)
 streamHandler.setFormatter(formatter)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 def pretty_print_poly(P=[]):
@@ -217,116 +217,6 @@ def polygon_split(polygon=[], splitLine=[]):
 if __name__ == '__main__':
 
 
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	e = [(0, 0), (1, 1)]
-
-	result = "PASS" if not polygon_split([], e) else "FAIL"
-	print("[%s] Empty P test."%result)
-
-	result = "PASS" if not polygon_split([[]], e) else "FAIL"
-	print("[%s] Wrong P format test."%result)
-
-	result = "PASS" if not polygon_split(P, []) else "FAIL"
-	print("[%s] Empty e test."%result)
-
-	result = "PASS" if not polygon_split([[], [1, 2, 3]], e) else "FAIL"
-	print("[%s] Empty exterior of P test."%result)
-
-	result = "PASS" if not polygon_split(P, [(0, 0)]) else "FAIL"
-	print("[%s] Split line with one coordinate."%result)
-
-	result = "PASS" if not polygon_split(P, [(0, 0), (1, 1), (0, 1)]) else "FAIL"
-	print("[%s] Split line with 3 coordinate."%result)
-
-	result = "PASS" if not polygon_split([[(0, 0), (1, 0), (1, 1), (0.1, -0.1)], []], e) else "FAIL"
-	print("[%s] Invalid polygon test."%result)
-
-	result = "PASS" if not polygon_split(P, [(0.1, 0.1), (0.9, 0.9)]) else "FAIL"
-	print("[%s] Cut entirely within polygon."%result)
-
-	result = "PASS" if not polygon_split(P, [(0, 0), (0.9, 0.9)]) else "FAIL"
-	print("[%s] Split line touches boundary at one point."%result)
-
-	result = "PASS" if not polygon_split(P, [(0, 0), (0, 1)]) else "FAIL"
-	print("[%s] Split line is along a boundary."%result)
-
-	P = [[(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)], []]
-	e = [(0.5, 0), (0.5, 1)]
-	result = "PASS" if not polygon_split(P, e) else "FAIL"
-	print("[%s] Split line crosses more than 2 points."%result)
-
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.2, 0.2),
-											 (0.2, 0.8),
-											 (0.8, 0.8),
-											 (0.8, 0.2)]]]
-	e = [(0.2, 0), (0.2, 1)]
-	result = "PASS" if not  polygon_split(P, e) else "FAIL"
-	print("[%s] Split line crosses a hole."%result)
-
-	P = [[(0, 0), (0.5, 0.5), (1, 0), (1, 1), (0, 1)], []]
-	e = [(0, 0), (1, 0)]
-	result = "PASS" if not  polygon_split(P, e) else "FAIL"
-	print("[%s] Split line on the outside 1."%result)
-
-	P = [[(0, 0), (0.5, 0.5), (1, 0), (1, 1), (0, 1)], []]
-	e = [(0, 0), (0.014, 1.1)]
-	result = "PASS" if not  polygon_split(P, e) else "FAIL"
-	print("[%s] Split line on the outside 2."%result)
-
-
-
-	# Now, do actual functional tests
-	P = [[(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)],
-			[[(0.1, 0.1), (0.1, 0.2), (0.2, 0.1)],
-			 [(0.9, 0.9), (0.9, 0.8), (0.8, 0.8)]]]
-	e = [(0, 0), (0.2, 0.8)]
-
-	result = polygon_split(P, e)
-	if  result:
-		P1, P2 = result
-		result = "PASS"
-		if set(P1[0]) != set([(1.0, 0.0), (1.0, 1.0), (0.8, 1.0), (0.2, 0.8), (0.0, 0.0)]):
-			result = "FAIL"
-		if set(P1[1][0]) != set([(0.1, 0.1), (0.1, 0.2), (0.2, 0.1)]):
-			result = "FAIL"
-		if set(P1[1][1]) != set([(0.9, 0.9), (0.9, 0.8), (0.8, 0.8)]):
-			result = "FAIL"
-		if set(P2[0]) != set([(0.5, 1.0),  (0.0, 1.0),  (0.0, 0.0),  (0.2, 0.8)]):
-			result = "FAIL"
-	else:
-		result = "FAIL"
-	print("[%s] Simple valid split test."%result)
-
-
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	e = [(0, 0.2), (1, 0.2)]
-	result = polygon_split(P, e)
-	if result:
-		P1, P2 = result
-		result = "PASS"
-		if set(P1[0]) != set([(1.0, 0.0),  (1.0, 0.2),  (0.0, 0.2),  (0.0, 0.0)]):
-			result = "FAIL"
-		if set(P2[0]) != set([(1.0, 1.0),  (0.0, 1.0),  (0.0, 0.2),  (1.0, 0.2)]):
-			result = "FAIL"
-	else:
-		result = "FAIL"
-	print("[%s] Simple valid split test."%result)
-
-
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	e = [(0.2, 0), (0, 0.2)]
-	result = polygon_split(P, e)
-	if result:
-		P1, P2 = result
-		result = "PASS"
-		if set(P1[0]) != set([(0.2, 0.0),  (0.0, 0.2),  (0.0, 0.0)]):
-			result = "FAIL"
-		if set(P2[0]) != set([(1.0, 0.0),  (1.0, 1.0),  (0.0, 1.0),  (0.0, 0.2),  (0.2, 0.0)]):
-			result = "FAIL"
-	else:
-		result = "FAIL"
-	print("[%s] Simple valid split test."%result)
-
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (0.9, 0.1)]]]
 	e = [(0.05, 0), (0.05, 1)]
 	P1, P2 = polygon_split(P, e)
@@ -362,8 +252,6 @@ if __name__ == '__main__':
 	for cutEdge in product(searchSpace, repeat=2):
 
 		result = polygon_split(P, cutEdge)
-
-
 
 	# Stability test where a lot of cuts are performed on one polygon
 	P = [[(0, 0),

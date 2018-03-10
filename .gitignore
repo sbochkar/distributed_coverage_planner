@@ -2,3 +2,4 @@
 *.par
 *.pyc
 logFile.txt
+polygonSplit.log

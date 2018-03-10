@@ -1,3 +1,5 @@
+import logging
+
 from shapely.geometry import Point
 from shapely.geometry import MultiPoint
 from shapely.geometry import Polygon
@@ -5,9 +7,19 @@ from shapely.geometry import LineString
 from shapely.geometry import MultiLineString
 from shapely.geometry import LinearRing
 
-# Bit mask:
-#	0x8: Lowest level logs. Happen very often.
-DEBUG_LEVEL = 0
+
+# Configure logging properties for this module
+logger = logging.getLogger("polygonSplit")
+fileHandler = logging.FileHandler("polygonSplit.log")
+streamHandler = logging.StreamHandler()
+logger.addHandler(fileHandler)
+logger.addHandler(streamHandler)
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+fileHandler.setFormatter(formatter)
+streamHandler.setFormatter(formatter)
+logger.setLevel(logging.DEBUG)
 
 
 def pretty_print_poly(P=[]):
@@ -47,10 +59,8 @@ def convert_to_canonical(P=[]):
 	"""
 
 	if type(P) is not Polygon:
-		if DEBUG_LEVEL & 0x04:
-			print("Polygon conversion requested but wrong input specified.")
-
-			return []
+		logger.warn("Polygon conversion requested but wrong input specified.")
+		return []
 
 	poly = [[], []]
 
@@ -128,10 +138,7 @@ def polygon_split(polygon=[], splitLine=[]):
 
 	# This calculates the points on the boundary where the split will happen.
 	commonPts = extrLineLR.intersection(splitLineLS)
-	if DEBUG_LEVEL & 0x8:
-		print("Cut line: %s"%splitLineLS)
-		print("Cut intersects boundary at: %s"%commonPts)
-
+	logger.debug("Cut: %10s Intersection: %10s"%(splitLineLS, commonPts))
 
 	# No intersection check.
 	if not commonPts:
@@ -162,15 +169,14 @@ def polygon_split(polygon=[], splitLine=[]):
  	if len(splitBoundary) > 3 or len(splitBoundary) < 2:
  		return []
 
-	if DEBUG_LEVEL & 0x8:
-		print("Boudanry is split: %s"%splitBoundary)
+	logger.debug("Split boundary: %s"%splitBoundary)
 
 	# Even though we use LinearRing, there is no wrap around and diff produces
 	#	3 strings. Need to union. Not sure if combining 1st and last strings 
 	#	is guaranteed to be the right combo. For now, place a check.
 	if len(splitBoundary) == 3:
 		if splitBoundary[0].coords[0] != splitBoundary[-1].coords[-1]:
-			print("The assumption that pts0[0] == pts2[-1] DOES not hold. Need"
+			logger.warn("The assumption that pts0[0] == pts2[-1] DOES not hold. Need"
 					"to investigate. Polygon split function.")
 			return []
 
@@ -210,10 +216,6 @@ def polygon_split(polygon=[], splitLine=[]):
 
 if __name__ == '__main__':
 
-
-	global DEBUG_LEVEL
-	# If package is launched from cmd line, run sanity checks
-	DEBUG_LEVEL = 0x0
 
 	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	e = [(0, 0), (1, 1)]

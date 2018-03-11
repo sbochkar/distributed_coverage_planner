@@ -89,15 +89,47 @@ def polygon_split(polygon=[], splitLine=[]):
 
 	TODO: With current implementation, it may be possible to do non-decomposing
 		cuts. But, some thought needs to be put in.
-	TODO: Consider returning Shapely objects instead of converting them to
-		canonical form. Will improve cycle efficiency.
+
+@startuml
+
+(*) --> "Check Inputs"
+if "OK?" then
+	-->[true] "Intersection boundary with cut"
+	if "Outputs OK?" then
+		--> "Difference boundary with cut"
+		if "Outputs OK?" then
+			-->[true] ===Chunks=== 
+			--> "Form masking polygon"
+			--> "Intersect masking polygon with input polygon"
+			===Chunks=== --> "Form masking polygon 2"
+			--> "Intersect masking polygon with input polygon"
+			if "Output OK?" then
+				-->[true] Return both polygons
+			else
+				-->[false] (*)
+			endif
+		else
+			-->[false] (*)
+		endif
+
+	else
+		-->[false] (*)
+	endif
+	
+
+
+else
+    -->[false] (*)
+endif
+
+@enduml
 
 	Args:
 		polygon: Shapely polygon object.
 		splitLine: Shapely LineString object.
 
 	Returns:
-		(P1, P2): A tuple of polygons resulted from the split. If error occured,
+		(P1, P2): A tuple of Shapely polygons resulted from the split. If error occured,
 		returns [].
 
 	"""

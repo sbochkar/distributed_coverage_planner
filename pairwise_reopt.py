@@ -1,3 +1,5 @@
+import logging
+
 from shapely.geometry import Polygon
 from shapely.geometry import LineString
 
@@ -13,6 +15,19 @@ LINEAR_PENALTY = 1		# Weights for the cost function
 ANGULAR_PENALTY = 10	# Weights for the cost function
 
 DEBUG_LEVEL = 0
+
+# Configure logging properties for this module
+logger = logging.getLogger("pairwiseReoptimization")
+fileHandler = logging.FileHandler("pairwiseReoptimization.log")
+streamHandler = logging.StreamHandler()
+logger.addHandler(fileHandler)
+logger.addHandler(streamHandler)
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+fileHandler.setFormatter(formatter)
+streamHandler.setFormatter(formatter)
+logger.setLevel(logging.INFO)
 
 
 def poly_shapely_to_canonical(polygon=[]):

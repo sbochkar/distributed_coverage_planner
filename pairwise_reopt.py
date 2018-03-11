@@ -182,7 +182,7 @@ def compute_pairwise_optimal(polygonA=[],
 			print("polygonUnionCanon: %s"%polygonUnionCanon)
 			print("Cut candidate: %s"%(cutEdge, ))
 		
-		result = polygon_split(polygonUnionCanon, cutEdge)
+		result = polygon_split(polygonUnion, LineString(cutEdge))
 
 		if DEBUG_LEVEL & 0x8:
 			if result:
@@ -194,22 +194,22 @@ def compute_pairwise_optimal(polygonA=[],
 			# Resolve cell-robot assignments here.
 			# This is to avoid the issue of cell assignments that
 			# don't make any sense after polygon cut.
-			chiA0 = compute_chi(polygon = result[0],
+			chiA0 = compute_chi(polygon = poly_shapely_to_canonical(result[0]),
 							   	initPos = robotAInitPos,
 							   	radius = radius,
 							   	linPenalty = linPenalty,
 							   	angPenalty = angPenalty)
-			chiA1 = compute_chi(polygon = result[1],
+			chiA1 = compute_chi(polygon = poly_shapely_to_canonical(result[1]),
 							   	initPos = robotAInitPos,
 							   	radius = radius,
 							   	linPenalty = linPenalty,
 							   	angPenalty = angPenalty)
-			chiB0 = compute_chi(polygon = result[0],
+			chiB0 = compute_chi(polygon = poly_shapely_to_canonical(result[0]),
 							   	initPos = robotBInitPos,
 							   	radius = radius,
 							   	linPenalty = linPenalty,
 							   	angPenalty = angPenalty)							   	
-			chiB1 = compute_chi(polygon = result[1],
+			chiB1 = compute_chi(polygon = poly_shapely_to_canonical(result[1]),
 							   	initPos = robotBInitPos,
 							   	radius = radius,
 							   	linPenalty = linPenalty,
@@ -233,7 +233,7 @@ def compute_pairwise_optimal(polygonA=[],
 	
 		return []
 
-	newPolygons = polygon_split(polygonUnionCanon, minCandidate)
+	newPolygons = polygon_split(polygonUnion, LineString(minCandidate))
 	return newPolygons
 
 

@@ -93,13 +93,8 @@ def polygon_split(polygon=[], splitLine=[]):
 		canonical form. Will improve cycle efficiency.
 
 	Args:
-		polygon: Polygon in the form of [ [], [[],...] ] where polygon[0] is
-			the exterior boundary of the polygon and polygon[1] is the list
-			of boundaries of holes.
-			Exterior boundary must be in ccw order. Last point != first point.
-			Same for hole boundaries.
-		splitLine: A line along which to split polygon into two. A list of 2
-			tuples specifying coordinates of straight line
+		polygon: Shapely polygon object.
+		splitLine: Shapely LineString object.
 
 	Returns:
 		(P1, P2): A tuple of polygons resulted from the split. If error occured,
@@ -107,38 +102,16 @@ def polygon_split(polygon=[], splitLine=[]):
 
 	"""
 
-	# Empty splitLine test
-	if not splitLine:
-		return []
-	# Empty polygon test
-	if not polygon:
-		return [] 
-	# Validity of splitLine
-	if len(splitLine) != 2:
-		return []
-	# Validity of polygon
-	if len(polygon) != 2:
+	if not splitLine or not polygon:
 		return []
 
-	extr, holes = polygon
-
-	# Validity of exterior of polygon
-	if not extr:
-		return []
-
-
-	pPol = Polygon(*polygon)
-	splitLineLS = LineString(splitLine)
-	extrLineLR = LinearRing(extr)
-
-
-	# Check validity of the polygon
-	if not pPol.is_valid:
+	if not polygon.is_valid:
 		return []
 
 	# This calculates the points on the boundary where the split will happen.
-	commonPts = extrLineLR.intersection(splitLineLS)
-	logger.debug("Cut: %10s Intersection: %10s"%(splitLineLS, commonPts))
+	extLine = polygon.exterior
+	commonPts = extLine.intersection(splitLine)
+	logger.debug("Cut: %s Intersection: %s"%(splitLine, commonPts))
 
 	# No intersection check.
 	if not commonPts:
@@ -150,18 +123,17 @@ def polygon_split(polygon=[], splitLine=[]):
 	if len(commonPts) != 2:
 		return []
 	# Split line should be inside polygon.
-	if not splitLineLS.within(pPol):
+	if not splitLine.within(polygon):
 		return []
 	# Check to see if cut line touches any holes
-	for hole in holes:
-		holeLS = LinearRing(hole)
-		if splitLineLS.intersects(holeLS):
+	for hole in polygon.interiors:
+		if splitLine.intersects(hole):
 			return []
 
 
 
 
-	splitBoundary = extrLineLR.difference(splitLineLS)
+	splitBoundary = extLine.difference(splitLine)
 	# Check that splitBoundary is a collection of linestrings
 	if type(splitBoundary) is not MultiLineString:
 		return []
@@ -195,8 +167,8 @@ def polygon_split(polygon=[], splitLine=[]):
 	if (not mask1.is_valid) or (not mask2.is_valid):
 		return []
 
-	resP1Pol = pPol.intersection(mask1)
-	resP2Pol = pPol.intersection(mask2)
+	resP1Pol = polygon.intersection(mask1)
+	resP2Pol = polygon.intersection(mask2)
 
 	if type(resP1Pol) is not Polygon:
 		return []
@@ -207,30 +179,26 @@ def polygon_split(polygon=[], splitLine=[]):
 	if not resP2Pol.is_valid:
 		return []
 
-	# The results of the intersection are Shapely objects. Convert them to list.
-	resP1 = convert_to_canonical(resP1Pol)
-	resP2 = convert_to_canonical(resP2Pol)
-
-	return resP1, resP2
+	return resP1Pol, resP2Pol
 
 
 if __name__ == '__main__':
 
 
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (0.9, 0.1)]]]
-	e = [(0.05, 0), (0.05, 1)]
+	P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (0.9, 0.1)]])
+	e = LineString([(0.05, 0), (0.05, 1)])
 	P1, P2 = polygon_split(P, e)
 
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	e = [(1, 0.8), (0.8, 1)]
+	P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+	e = LineString([(1, 0.8), (0.8, 1)])
 	P1, P2 = polygon_split(P, e)
 
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	e = [(0.2, 1), (0, 0.8)]
+	P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+	e = LineString([(0.2, 1), (0, 0.8)])
 	P1, P2 = polygon_split(P, e)
 
-	P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	e = [(0, 0.2), (0.2, 0)]
+	P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+	e = LineString([(0, 0.2), (0.2, 0)])
 	P1, P2 = polygon_split(P, e)
 	#pretty_print_poly(P1)
 	#pretty_print_poly(P2)

@@ -1,120 +1,117 @@
 import unittest
+
+from shapely.geometry import Polygon
+from shapely.geometry import LineString
+
 from polygon_split import polygon_split
 
 class polygonSplitTest(unittest.TestCase):
 
 	def test_polygonSplit_emptyPolygon(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0, 0), (1, 1)])
 		self.assertEqual(polygon_split([], e), [])
 
-	def test_polygonSplit_wrongFormatPolygon(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
-		self.assertEqual(polygon_split([[]], e), [])
-
 	def test_polygonSplit_emptyEdge(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0, 0), (1, 1)])
 		self.assertEqual(polygon_split(P, []), [])
 
-	def test_polygonSplit_emptyExterior(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
-		self.assertEqual(polygon_split([[], [1, 2, 3]], e), [])
-
-	def test_polygonSplit_inccorrectEdge1(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
-		self.assertEqual(polygon_split(P, [(0, 0)]), [])
 
 	def test_polygonSplit_inccorectEdge2(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
-		self.assertEqual(polygon_split(P, [(0, 0), (1, 1), (0, 1)]), [])
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0, 0), (1, 1), (0, 1)])
+		self.assertEqual(polygon_split(P, e), [])
 
 	def test_polygonSplit_selfintersectingPolygon(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
-		self.assertEqual(polygon_split([[(0, 0), (1, 0), (1, 1), (0.1, -0.1)], []], e), [])
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0.1, -0.1)], [])
+		e = LineString([(0, 0), (1, 1)])
+		self.assertEqual(polygon_split(P, e), [])
 
 	def test_polygonSplit_cutInsidePolygon(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
-		self.assertEqual(polygon_split(P, [(0.1, 0.1), (0.9, 0.9)]), [])
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0.1, 0.1), (0.9, 0.9)])
+		self.assertEqual(polygon_split(P, e), [])
 
 	def test_polygonSplit_cutTouchesPolygon(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
-		self.assertEqual(polygon_split(P, [(0, 0), (0.9, 0.9)]), [])
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0, 0), (0.9, 0.9)])
+		self.assertEqual(polygon_split(P, e), [])
 
 	def test_polygonSplit_cutAlongBoundary(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 1)]
-		self.assertEqual(polygon_split(P, [(0, 0), (0, 1)]), [])
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0, 0), (0, 1)])
+		self.assertEqual(polygon_split(P, e), [])
 
 	def test_polygonSplit_cutThroughManyPoints(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)], []]
-		e = [(0.5, 0), (0.5, 1)]
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)], [])
+		e = LineString([(0.5, 0), (0.5, 1)])
 		self.assertEqual(polygon_split(P, e), [])
 
 	def test_polygonSplit_cutThroughHole(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.2, 0.2),
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [[(0.2, 0.2),
 												(0.2, 0.8),
 												(0.8, 0.8),
-												(0.8, 0.2)]]]
-		e = [(0.2, 0), (0.2, 1)]
+												(0.8, 0.2)]])
+		e = LineString([(0.2, 0), (0.2, 1)])
 		self.assertEqual(polygon_split(P, e), [])
 
 	def test_polygonSplit_cutOutsidePolygon1(self):
-		P = [[(0, 0), (0.5, 0.5), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (1, 0)]
+		P = Polygon([(0, 0), (0.5, 0.5), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0, 0), (1, 0)])
 		self.assertEqual(polygon_split(P, e), [])
 
 	def test_polygonSplit_cutOutsidePolygon2(self):
-		P = [[(0, 0), (0.5, 0.5), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0), (0.014, 1.1)]
+		P = Polygon([(0, 0), (0.5, 0.5), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0, 0), (0.014, 1.1)])
 		self.assertEqual(polygon_split(P, e), [])
 
 	def test_polygonSplit_validSplit1(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)],
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0.8, 1), (0.2, 0.8), (0.5, 1), (0, 1)],
 			[[(0.1, 0.1), (0.1, 0.2), (0.2, 0.1)],
-			 [(0.9, 0.9), (0.9, 0.8), (0.8, 0.8)]]]
-		e = [(0, 0), (0.2, 0.8)]
+			 [(0.9, 0.9), (0.9, 0.8), (0.8, 0.8)]])
+		e = LineString([(0, 0), (0.2, 0.8)])
 		result = polygon_split(P, e)
 		self.assertTrue(result)
 		P1, P2 = result
 		self.assertTrue(P1)
 		self.assertTrue(P2)
-		self.assertEqual(set(P1[0]), set([(1.0, 0.0), (1.0, 1.0), (0.8, 1.0), (0.2, 0.8), (0.0, 0.0)]))
-		self.assertEqual(set(P1[1][0]), set([(0.1, 0.1), (0.1, 0.2), (0.2, 0.1)]))
-		self.assertEqual(set(P1[1][1]), set([(0.9, 0.9), (0.9, 0.8), (0.8, 0.8)]))
-		self.assertEqual(set(P2[0]), set([(0.5, 1.0), (0.0, 1.0), (0.0, 0.0), (0.2, 0.8)]))
+
+		testPolygon1 = Polygon([(1.0, 0.0), (1.0, 1.0), (0.8, 1.0), (0.2, 0.8), (0.0, 0.0)], [[(0.1, 0.1), (0.1, 0.2), (0.2, 0.1)], [(0.9, 0.9), (0.9, 0.8), (0.8, 0.8)]])
+		testPolygon2 = Polygon([(0.5, 1.0), (0.0, 1.0), (0.0, 0.0), (0.2, 0.8)])
+
+		self.assertTrue(P1.equals(testPolygon1) and P2.equals(testPolygon2))
 
 	def test_polygonSplit_validSplit2(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0, 0.2), (1, 0.2)]
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0, 0.2), (1, 0.2)])
 		result = polygon_split(P, e)
 		self.assertTrue(result)
 		P1, P2 = result
 		self.assertTrue(P1)
 		self.assertTrue(P2)
-		self.assertEqual(set(P1[0]), set([(1.0, 0.0), (1.0, 0.2), (0.0, 0.2), (0.0, 0.0)]))
-		self.assertEqual(set(P2[0]), set([(1.0, 1.0), (0.0, 1.0), (0.0, 0.2), (1.0, 0.2)]))
+
+		testPolygon1 = Polygon([(1.0, 0.0), (1.0, 0.2), (0.0, 0.2), (0.0, 0.0)])
+		testPolygon2 = Polygon([(1.0, 1.0), (0.0, 1.0), (0.0, 0.2), (1.0, 0.2)])
+
+		self.assertTrue(P1.equals(testPolygon1) and P2.equals(testPolygon2))
 
 	def test_polygonSplit_validSplit3(self):
-		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-		e = [(0.2, 0), (0, 0.2)]
+		P = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+		e = LineString([(0.2, 0), (0, 0.2)])
 		result = polygon_split(P, e)
 		self.assertTrue(result)
 		P1, P2 = result
 		self.assertTrue(P1)
 		self.assertTrue(P2)
-		self.assertEqual(set(P1[0]), set([(0.2, 0.0), (0.0, 0.2), (0.0, 0.0)]))
-		self.assertEqual(set(P2[0]), set([(1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.2), (0.2, 0.0)]))
+
+		testPolygon1 = Polygon([(0.2, 0.0), (0.0, 0.2), (0.0, 0.0)])
+		testPolygon2 = Polygon([(1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.2), (0.2, 0.0)])
+
+		self.assertTrue(P1.equals(testPolygon1) and P2.equals(testPolygon2))
 
 	def test_stability(self):
-		P = [[(0, 0),
+		P = Polygon([(0, 0),
 			  (3, 1),
 			  (3, 0),
 			  (4, 1),
@@ -128,10 +125,9 @@ class polygonSplitTest(unittest.TestCase):
 			  (1, 2),
 			  (0, 1.5),
 			  (1, 1),
-			  (0, 0.5)], [[(3, 2), (3, 3), (4, 3), (4, 2)]]]
+			  (0, 0.5)], [[(3, 2), (3, 3), (4, 3), (4, 2)]])
 		
-		from shapely.geometry import Polygon
-		polyExterior = Polygon(*P).exterior
+		polyExterior = P.exterior
 	
 		from numpy import linspace
 		from itertools import product
@@ -144,7 +140,8 @@ class polygonSplitTest(unittest.TestCase):
 	
 		try:
 			for cutEdge in product(searchSpace, repeat=2):
-				result = polygon_split(P, cutEdge)
+				cutEdgeLS = LineString(cutEdge)
+				result = polygon_split(P, cutEdgeLS)
 		except Exception:
 			self.fail("Stability test has failed!")
 

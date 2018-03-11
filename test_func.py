@@ -1,7 +1,7 @@
 import unittest
 from polygon_split import polygon_split
 
-class unitTest(unittest.TestCase):
+class polygonSplitTest(unittest.TestCase):
 
 	def test_polygonSplit_emptyPolygon(self):
 		P = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
@@ -113,7 +113,51 @@ class unitTest(unittest.TestCase):
 		self.assertEqual(set(P1[0]), set([(0.2, 0.0), (0.0, 0.2), (0.0, 0.0)]))
 		self.assertEqual(set(P2[0]), set([(1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.2), (0.2, 0.0)]))
 
+	def test_stability(self):
+		P = [[(0, 0),
+			  (3, 1),
+			  (3, 0),
+			  (4, 1),
+			  (5, 0),
+			  (5, 1),
+			  (7, 1),
+			  (5, 2),
+			  (7, 3),
+			  (0, 4),
+			  (0, 2.5),
+			  (1, 2),
+			  (0, 1.5),
+			  (1, 1),
+			  (0, 0.5)], [[(3, 2), (3, 3), (4, 3), (4, 2)]]]
+		
+		from shapely.geometry import Polygon
+		polyExterior = Polygon(*P).exterior
+	
+		from numpy import linspace
+		from itertools import product
+		searchDistances = list(linspace(0, polyExterior.length, 500))
+
+		searchSpace = []
+		for distance in searchDistances:
+			solutionCandidate = polyExterior.interpolate(distance)
+			searchSpace.append((solutionCandidate.x, solutionCandidate.y))
+	
+		try:
+			for cutEdge in product(searchSpace, repeat=2):
+				result = polygon_split(P, cutEdge)
+		except Exception:
+			self.fail("Stability test has failed!")
 
 
-if __name__ == '__main__':
-	unittest.main()
+
+def suite():
+    """
+        Gather all the tests from this module in a test suite.
+    """
+    test_suite = unittest.TestSuite()
+    test_suite.addTest(unittest.makeSuite(polygonSplitTest))
+    return test_suite
+
+mySuit = suite()
+runner = unittest.TextTestRunner()
+runner.run(mySuit)

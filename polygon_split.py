@@ -177,7 +177,7 @@ def polygon_split(polygon=[], splitLine=[]):
 	if len(splitBoundary) == 3:
 		if splitBoundary[0].coords[0] != splitBoundary[-1].coords[-1]:
 			logger.warn("The assumption that pts0[0] == pts2[-1] DOES not hold. Need"
-					"to investigate. Polygon split function.")
+					"to investigate.")
 			return []
 
 		line1 = LineString(list(list(splitBoundary[-1].coords)[:-1]+list(splitBoundary[0].coords)))
@@ -234,54 +234,3 @@ if __name__ == '__main__':
 	P1, P2 = polygon_split(P, e)
 	#pretty_print_poly(P1)
 	#pretty_print_poly(P2)
-
-
-	# Stability test where a lot of cuts are performed on one polygon
-	P = [[(0.9285714285714286, 1.785714285714285), (0.8333333333333334, 0.1666666666666667), (1.0, 0.0), (2.0, 0.0), (1.681818181818182, 1.863636363636363), (3.0, 2.0), (2.0, 3.0), (1.0, 3.0), (0.9285714285714286, 1.785714285714285)], []]
-	e = [(2.711344240884324, 1.970139059401827), (1.722081099006799, 1.627810705817321)]
-	
-	polyExterior = Polygon(*P).exterior
-	from numpy import linspace
-	from itertools import product
-	searchDistances = list(linspace(0, polyExterior.length, 0))
-
-	searchSpace = []
-	for distance in searchDistances:
-		solutionCandidate = polyExterior.interpolate(distance)
-		searchSpace.append((solutionCandidate.x, solutionCandidate.y))
-	for cutEdge in product(searchSpace, repeat=2):
-
-		result = polygon_split(P, cutEdge)
-
-	# Stability test where a lot of cuts are performed on one polygon
-	P = [[(0, 0),
-		  (3, 1),
-		  (3, 0),
-		  (4, 1),
-		  (5, 0),
-		  (5, 1),
-		  (7, 1),
-		  (5, 2),
-		  (7, 3),
-		  (0, 4),
-		  (0, 2.5),
-		  (1, 2),
-		  (0, 1.5),
-		  (1, 1),
-		  (0, 0.5)], [[(3, 2), (3, 3), (4, 3), (4, 2)]]]
-	
-	polyExterior = Polygon(*P).exterior
-	from numpy import linspace
-	from itertools import product
-	searchDistances = list(linspace(0, polyExterior.length, 500))
-
-	searchSpace = []
-	for distance in searchDistances:
-		solutionCandidate = polyExterior.interpolate(distance)
-		searchSpace.append((solutionCandidate.x, solutionCandidate.y))
-	successCount = 0
-	for cutEdge in product(searchSpace, repeat=2):
-		result = polygon_split(P, cutEdge)
-		if not result:
-			successCount += 1
-	print successCount

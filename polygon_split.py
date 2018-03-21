@@ -90,39 +90,39 @@ def polygon_split(polygon=[], splitLine=[]):
 	TODO: With current implementation, it may be possible to do non-decomposing
 		cuts. But, some thought needs to be put in.
 
-@startuml
+	@startuml
 
-(*) --> "Check Inputs"
-if "OK?" then
-	-->[true] "Intersection boundary with cut"
-	if "Outputs OK?" then
-		--> "Difference boundary with cut"
+	(*) --> "Check Inputs"
+	if "OK?" then
+		-->[true] "Intersection boundary with cut"
 		if "Outputs OK?" then
-			-->[true] ===Chunks=== 
-			--> "Form masking polygon"
-			--> "Intersect masking polygon with input polygon"
-			===Chunks=== --> "Form masking polygon 2"
-			--> "Intersect masking polygon with input polygon"
-			if "Output OK?" then
-				-->[true] Return both polygons
+			--> "Difference boundary with cut"
+			if "Outputs OK?" then
+				-->[true] ===Chunks=== 
+				--> "Form masking polygon"
+				--> "Intersect masking polygon with input polygon"
+				===Chunks=== --> "Form masking polygon 2"
+				--> "Intersect masking polygon with input polygon"
+				if "Output OK?" then
+					-->[true] Return both polygons
+				else
+					-->[false] (*)
+				endif
 			else
 				-->[false] (*)
 			endif
+
 		else
 			-->[false] (*)
 		endif
+		
+
 
 	else
-		-->[false] (*)
+	    -->[false] (*)
 	endif
-	
 
-
-else
-    -->[false] (*)
-endif
-
-@enduml
+	@enduml
 
 	Args:
 		polygon: Shapely polygon object.

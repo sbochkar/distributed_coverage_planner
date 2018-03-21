@@ -14,7 +14,6 @@ RADIUS = 0.1
 LINEAR_PENALTY = 1		# Weights for the cost function
 ANGULAR_PENALTY = 10	# Weights for the cost function
 
-DEBUG_LEVEL = 0
 
 # Configure logging properties for this module
 logger = logging.getLogger("pairwiseReoptimization")
@@ -100,33 +99,27 @@ def compute_pairwise_optimal(polygonA=[],
 	# 3) Return that cut or no cut if nothing better was found
 
 	if not polygonA or not polygonB:
-		if DEBUG_LEVEL & 0x04:
-			print("Pairwise reoptimization is requested on an empty polygon.")
+		logger.warn("Pairwise reoptimization is requested on an empty polygon.")
 		return []
 
 	if not robotAInitPos or not robotBInitPos:
-		if DEBUG_LEVEL & 0x04:
-			print("Pairwise reoptimization is requested on an empty init pos.")
+		logger.warn("Pairwise reoptimization is requested on an empty init pos.")
 		return []
 
 	if not Polygon(*polygonA).is_valid or not Polygon(*polygonB).is_valid:
-		if DEBUG_LEVEL & 0x04:
-			print("Pariwise reoptimization is requested on invalid polygons.")
+		logger.warn("Pariwise reoptimization is requested on invalid polygons.")
 		return []
 
 	if not Polygon(*polygonA).is_valid or not Polygon(*polygonB).is_valid:
-		if DEBUG_LEVEL & 0x04:
-			print("Pariwise reoptimization is requested on invalid polygons.")
+		logger.warn("Pariwise reoptimization is requested on invalid polygons.")
 		return []
 
 	if not Polygon(*polygonA).is_simple or not Polygon(*polygonB).is_simple:
-		if DEBUG_LEVEL & 0x04:
-			print("Pariwise reoptimization is requested on nonsimple polygons.")
+		logger.warn("Pariwise reoptimization is requested on nonsimple polygons.")
 		return []
 
 	if not Polygon(*polygonA).touches(Polygon(*polygonB)):
-		if DEBUG_LEVEL & 0x04:
-			print("Pariwise reoptimization is requested on nontouching polys.")
+		logger.warn("Pariwise reoptimization is requested on nontouching polys.")
 		return []
 
 
@@ -135,8 +128,7 @@ def compute_pairwise_optimal(polygonA=[],
 
 
 	if type(intersection) is not LineString:
-		if DEBUG_LEVEL & 0x04:
-			print("Pariwise reoptimization is requested but they don't touch\
+		logger.warn("Pariwise reoptimization is requested but they don't touch\
 				   at an edge.")
 		return []
 
@@ -148,14 +140,12 @@ def compute_pairwise_optimal(polygonA=[],
 	polygonUnionCanon = poly_shapely_to_canonical(polygonUnion)
 
 	if not polygonUnion.is_valid or not polygonUnion.is_simple:
-		if DEBUG_LEVEL & 0x04:
-			print("Pariwise reoptimization is requested but the union resulted\
+		logger.warn("Pariwise reoptimization is requested but the union resulted\
 				   in bad polygon.")
 		return []
 
 	if type(polygonUnion) is not Polygon:
-		if DEBUG_LEVEL & 0x04:
-			print("Pariwise reoptimization is requested but union resulted in\
+		logger.warn("Pariwise reoptimization is requested but union resulted in\
 				   non polygon.")
 		return []
 
@@ -193,17 +183,15 @@ def compute_pairwise_optimal(polygonA=[],
 	# It is a very costly search.
 	for cutEdge in product(searchSpace, repeat=2):
 
-		if DEBUG_LEVEL & 0x8:
-			print("polygonUnionCanon: %s"%polygonUnionCanon)
-			print("Cut candidate: %s"%(cutEdge, ))
+		logger.debug("polygonUnionCanon: %s"%polygonUnionCanon)
+		logger.debug("Cut candidate: %s"%(cutEdge, ))
 		
 		result = polygon_split(polygonUnion, LineString(cutEdge))
 
-		if DEBUG_LEVEL & 0x8:
-			if result:
-				print("%s Split Line: %s"%('GOOD', cutEdge,))
-			else:
-				print("%s Split Line: %s"%("BAD ", cutEdge))
+		if result:
+			logger.debug("%s Split Line: %s"%('GOOD', cutEdge,))
+		else:
+			logger.debug("%s Split Line: %s"%("BAD ", cutEdge))
 
 		if result:
 			# Resolve cell-robot assignments here.
@@ -238,13 +226,11 @@ def compute_pairwise_optimal(polygonA=[],
 				minCandidate = cutEdge
 				minMaxChiFinal = minMaxChi
 
-	if DEBUG_LEVEL & 0x8:
-		print("Computed min max chi as: %4.2f"%minMaxChiFinal)
-		print("Cut: %s"%(minCandidate, ))
+	logger.debug("Computed min max chi as: %4.2f"%minMaxChiFinal)
+	logger.debug("Cut: %s"%(minCandidate, ))
 
 	if initMaxChi < minMaxChiFinal:
-		if DEBUG_LEVEL & 0x8:
-			print("No cut results in minimum altitude")
+		logger.debug("No cut results in minimum altitude")
 	
 		return []
 
@@ -253,14 +239,6 @@ def compute_pairwise_optimal(polygonA=[],
 
 
 if __name__ == '__main__':
-
-	# If package is launched from cmd line, run sanity checks
-	global DEBUG_LEVEL
-
-	DEBUG_LEVEL = 0 #0x8+0x4
-
-	print("\nSanity tests for pairwise reoptimization.\n")
-
 
 	P1 = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
 	P2 = [[(1, 0), (2, 0), (2, 1), (1, 1)], []]

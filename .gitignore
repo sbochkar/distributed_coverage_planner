@@ -1,5 +1,6 @@
 *.gtsp
 *.par
 *.pyc
+*.png
 logFile.txt
-polygonSplit.log
+*.log

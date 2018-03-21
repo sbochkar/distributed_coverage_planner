@@ -4,7 +4,9 @@ from shapely.geometry import Polygon
 from shapely.geometry import LineString
 
 from polygon_split import polygon_split
+from pairwise_reopt import compute_pairwise_optimal
 
+# Test suite for polygon split function
 class polygonSplitTest(unittest.TestCase):
 
 	def test_polygonSplit_emptyPolygon(self):
@@ -146,13 +148,47 @@ class polygonSplitTest(unittest.TestCase):
 			self.fail("Stability test has failed!")
 
 
+# Test suite for pariwise reoptimization step
+class pairwiseReoptimizationTest(unittest.TestCase):
+
+	def test_simePolygon1(self):
+		P1 = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+		P2 = [[(1, 0), (2, 0), (2, 1), (1, 1)], []]
+		initA = (0, 0)
+		initB = (1, 0)
+		try:
+			result = compute_pairwise_optimal(P1, P2, initA, initB)
+			self.assertFalse(result)
+		except Exception:
+			self.fail("Reoptimization test crashed!")
+
+	def test_simePolygon2(self):
+		P1 = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+		P2 = [[(1, 0), (2, 0), (2, 1), (1, 1)], []]
+		initA = (0, 0)
+		initB = (0, 0)
+		try:
+			compute_pairwise_optimal(P1, P2, initA, initB)
+		except Exception:
+			self.fail("Reoptimization test crashed!")
+
+	def test_simePolygon3(self):
+		P1 = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
+		P2 = [[(1, 0), (2, 0), (2, 1), (1, 1)], []]
+		initA = (0, 0)
+		initB = (0, 1)
+		try:
+			compute_pairwise_optimal(P1, P2, initA, initB)	
+		except Exception:
+			self.fail("Reoptimization test crashed!")
 
 def suite():
     """
         Gather all the tests from this module in a test suite.
     """
     test_suite = unittest.TestSuite()
-    test_suite.addTest(unittest.makeSuite(polygonSplitTest))
+    #test_suite.addTest(unittest.makeSuite(polygonSplitTest))
+    test_suite.addTest(unittest.makeSuite(pairwiseReoptimizationTest))
     return test_suite
 
 mySuit = suite()

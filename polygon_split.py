@@ -10,7 +10,7 @@ from shapely.geometry import LinearRing
 
 # Configure logging properties for this module
 logger = logging.getLogger("polygonSplit")
-fileHandler = logging.FileHandler("polygonSplit.log")
+fileHandler = logging.FileHandler("logs/polygonSplit.log")
 streamHandler = logging.StreamHandler()
 logger.addHandler(fileHandler)
 logger.addHandler(streamHandler)

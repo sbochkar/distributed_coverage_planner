@@ -9,7 +9,7 @@ from shapely.geometry import MultiPolygon
 
 # Configure logging properties for this module
 logger = logging.getLogger("chi")
-fileHandler = logging.FileHandler("chi.log")
+fileHandler = logging.FileHandler("logs/chi.log")
 streamHandler = logging.StreamHandler()
 logger.addHandler(fileHandler)
 logger.addHandler(streamHandler)

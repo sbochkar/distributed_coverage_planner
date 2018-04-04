@@ -17,7 +17,7 @@ ANGULAR_PENALTY = 10	# Weights for the cost function
 
 # Configure logging properties for this module
 logger = logging.getLogger("pairwiseReoptimization")
-fileHandler = logging.FileHandler("pairwiseReoptimization.log")
+fileHandler = logging.FileHandler("logs/pairwiseReoptimization.log")
 streamHandler = logging.StreamHandler()
 logger.addHandler(fileHandler)
 logger.addHandler(streamHandler)

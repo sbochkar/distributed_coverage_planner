@@ -95,19 +95,3 @@ class ChiOptimizer():
         self.logger.debug("[%3d]: %s\n", i + 1, sorted_chi_costs)
 
         return decomposition, original_chi_costs, new_chi_costs
-
-
-if __name__ == '__main__':
-
-    # If package is launched from cmd line, run sanity checks
-    print("\n_sanity tests for the reoptimizer.\n")
-
-    q = {0: (0.0,0.0), 1: (10.0,0.0), 2: (10.0,1.0), 3: (0.0,1.0)}
-    decomposition_ = [[[(0.0,0.0),(10.0,0.0), (10.0,0.5)],[]], [[(0.0,0.0),(10.0,0.5),(10.0,1.0),(5.0,0.5)],[]], [[(5.0,0.5),(10.0,1.0),(0.0,1.0)],[]], [[(0.0,0.0),(5.0,0.5),(0.0,1.0)],[]]]
-
-    optimizer = ChiOptimizer()
-
-    optimizer.run_iterations(decomposition=decomposition_,
-                             cell_to_site_map=q,
-                             original_chi_costs=[],
-                             new_chi_costs=[])

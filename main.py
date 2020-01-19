@@ -1,14 +1,11 @@
 """Entry point for distributed planner"""
-import logging
 from typing import List
 import sys
 
 import coverage_plot as splot
 
 from polygons import decomposition_generator
-from decomposition_processing import compute_adjacency
-from chi import compute_chi
-from reoptimizer import chi_reoptimize
+from optimizer import ChiOptimizer
 from log_utils import get_logger
 
 
@@ -92,14 +89,14 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
 
     logger.info("Reoptimizing polygon: %3d", poly_id)
     logger.info("Attempting %d reoptimization iterations.", num_reopt_iters)
-    new_decomposition = chi_reoptimize(decomposition,
-                                       cell_to_site_map,
-                                       old_costs,
-                                       new_costs,
-                                       num_iterations=num_reopt_iters,
-                                       radius=RADIUS,
-                                       lin_penalty=LINEAR_PENALTY,
-                                       ang_penalty=ANGULAR_PENALTY)
+    optimizer = ChiOptimizer(num_iterations=num_reopt_iters,
+                             radius=RADIUS,
+                             lin_penalty=LINEAR_PENALTY,
+                             ang_penalty=ANGULAR_PENALTY)
+    new_decomposition = optimizer.run_iterations(decomposition,
+                                                 cell_to_site_map,
+                                                 old_costs,
+                                                 new_costs)
 
     # TODO: Temporary w.a. until we completely transition to Polygon objects.
     new_decomposition = [poly_shapely_to_canonical(poly) for poly in new_decomposition]

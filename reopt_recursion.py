@@ -8,6 +8,7 @@ from shapely.geometry import LineString, Polygon, Point
 from chi import compute_chi
 from pairwise_reopt import compute_pairwise_optimal
 from decomposition_processing import compute_adjacency
+from log_utils import get_logger
 
 
 # Need to move these to the main calling function
@@ -17,17 +18,7 @@ ANGULAR_PENALTY = 10*1.0/360
 
 
 # Configure logging properties for this module
-logger = logging.getLogger("recursive_reoptimizer")
-fileHandler = logging.FileHandler("logs/recursive_reoptimizer.log")
-streamHandler = logging.StreamHandler()
-logger.addHandler(fileHandler)
-logger.addHandler(streamHandler)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-fileHandler.setFormatter(formatter)
-streamHandler.setFormatter(formatter)
-logger.setLevel(logging.DEBUG)
+logger = get_logger("recursive_reoptimizer")
 
 
 def dft_recursion(decomposition,

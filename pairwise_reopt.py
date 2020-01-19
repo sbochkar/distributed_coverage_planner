@@ -1,15 +1,15 @@
 """Algorithm for pairwise reoptimization."""
-import logging
+from itertools import product
 from typing import List, Tuple, Optional
 import sys
 
-from shapely.geometry import LineString, Polygon, Point
-
 from numpy import linspace
-from itertools import product
+
+from shapely.geometry import LineString, Polygon, Point
 
 from chi import compute_chi
 from polygon_split import polygon_split
+from log_utils import get_logger
 
 
 RADIUS = 0.1
@@ -17,54 +17,7 @@ LINEAR_PENALTY = 1        # Weights for the cost function
 ANGULAR_PENALTY = 10    # Weights for the cost function
 
 
-# Configure logging properties for this module
-logger = logging.getLogger("pairwiseReoptimization")
-fileHandler = logging.FileHandler("logs/pairwiseReoptimization.log")
-streamHandler = logging.StreamHandler()
-logger.addHandler(fileHandler)
-logger.addHandler(streamHandler)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-fileHandler.setFormatter(formatter)
-streamHandler.setFormatter(formatter)
-logger.setLevel(logging.INFO)
-
-
-def poly_shapely_to_canonical(polygon=[]):
-    """
-    A simple helper function to convert a shapely object representing a polygon
-    intop a cononical form polygon.
-
-    Args:
-        polygon: A shapely object representing a polygon
-
-    Returns:
-        A polygon in canonical form.
-    """
-
-    if not polygon:
-        return []
-
-    canonicalPolygon = []
-
-    if polygon.exterior.is_ccw:
-        poly_exterior = list(polygon.exterior.coords)
-    else:
-        poly_exterior = list(polygon.exterior.coords)[::-1]
-
-
-    holes = []
-    for hole in polygon.interiors:
-        if hole.is_ccw:
-            holes.append(list(polygon.exterior.coords)[::-1])
-        else:
-            holes.append(list(polygon.exterior.coords))
-
-    canonicalPolygon.append(poly_exterior)
-    canonicalPolygon.append(holes)
-
-    return canonicalPolygon
+logger = get_logger("pairwiseReoptimization")
 
 
 def compute_pairwise_optimal(polygon_a: Polygon,

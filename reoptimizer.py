@@ -6,22 +6,10 @@ from shapely.geometry import LineString, Polygon, Point
 from decomposition_processing import compute_adjacency
 from chi import compute_chi
 from reopt_recursion import dft_recursion
+from log_utils import get_logger
 
 
-DEBUG_LEVEL = 0x2
-
-
-logger = logging.getLogger("reoptimizer")
-file_handler = logging.FileHandler("logs/reoptimier.log")
-stream_handler = logging.StreamHandler()
-logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-file_handler.setFormatter(formatter)
-stream_handler.setFormatter(formatter)
-logger.setLevel(logging.DEBUG)
+logger = get_logger("reoptimizer")
 
 
 def chi_reoptimize(decomposition,
@@ -118,9 +106,7 @@ def chi_reoptimize(decomposition,
 if __name__ == '__main__':
 
     # If package is launched from cmd line, run sanity checks
-    #global DEBUG_LEVEL
 
-    DEBUG_LEVEL = 0 #0x8+0x4
 
     print("\n_sanity tests for the reoptimizer.\n")
 

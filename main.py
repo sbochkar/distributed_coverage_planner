@@ -9,6 +9,7 @@ from polygons import decomposition_generator
 from decomposition_processing import compute_adjacency
 from chi import compute_chi
 from reoptimizer import chi_reoptimize
+from log_utils import get_logger
 
 
 GLKH_LOCATION = "/home//misc/GLKH-1.0/"
@@ -21,18 +22,7 @@ ANGULAR_PENALTY = 100*1.0/360
 DEBUG_LEVEL = 0
 
 
-logger = logging.getLogger("main")
-fileHandler = logging.FileHandler("logs/main.log")
-streamHandler = logging.StreamHandler()
-logger.addHandler(fileHandler)
-logger.addHandler(streamHandler)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-fileHandler.setFormatter(formatter)
-streamHandler.setFormatter(formatter)
-logger.setLevel(logging.DEBUG)
-
+logger = get_logger("main")
 
 
 def pretty_print_decomposition(decomposition):
@@ -44,6 +34,41 @@ def pretty_print_decomposition(decomposition):
         for elem in boundary:
             print("(%.2f, %.2f), "%(elem[0],elem[1])),
         print("\n"),
+
+
+def poly_shapely_to_canonical(polygon=[]):
+    """
+    A simple helper function to convert a shapely object representing a polygon
+    intop a cononical form polygon.
+
+    Args:
+        polygon: A shapely object representing a polygon
+
+    Returns:
+        A polygon in canonical form.
+    """
+    if not polygon:
+        return []
+
+    canonicalPolygon = []
+
+    if polygon.exterior.is_ccw:
+        poly_exterior = list(polygon.exterior.coords)
+    else:
+        poly_exterior = list(polygon.exterior.coords)[::-1]
+
+
+    holes = []
+    for hole in polygon.interiors:
+        if hole.is_ccw:
+            holes.append(list(polygon.exterior.coords)[::-1])
+        else:
+            holes.append(list(polygon.exterior.coords))
+
+    canonicalPolygon.append(poly_exterior)
+    canonicalPolygon.append(holes)
+
+    return canonicalPolygon
 
 
 def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
@@ -60,61 +85,24 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
         poly_id (int): Id of the polygon. Needed to select started polygons.
         num_reopt_iters (int): Run reoptimizer for this many iterations.
     """
-
     polygon, cell_to_site_map, decomposition = decomposition_generator(poly_id)
-
-    # TODO: Should modify source code so that this is not necessary.
-    old_decomposition = list(decomposition)
 
     old_costs: List[float] = []
     new_costs: List[float] = []
 
     logger.info("Reoptimizing polygon: %3d", poly_id)
     logger.info("Attempting %d reoptimization iterations.", num_reopt_iters)
-    decomposition = chi_reoptimize(decomposition,
-                                   cell_to_site_map,
-                                   old_costs,
-                                   new_costs,
-                                   num_iterations=num_reopt_iters,
-                                   radius=RADIUS,
-                                   lin_penalty=LINEAR_PENALTY,
-                                   ang_penalty=ANGULAR_PENALTY)
+    new_decomposition = chi_reoptimize(decomposition,
+                                       cell_to_site_map,
+                                       old_costs,
+                                       new_costs,
+                                       num_iterations=num_reopt_iters,
+                                       radius=RADIUS,
+                                       lin_penalty=LINEAR_PENALTY,
+                                       ang_penalty=ANGULAR_PENALTY)
 
     # TODO: Temporary w.a. until we completely transition to Polygon objects.
-    def poly_shapely_to_canonical(polygon=[]):
-        """
-        A simple helper function to convert a shapely object representing a polygon
-        intop a cononical form polygon.
-    
-        Args:
-            polygon: A shapely object representing a polygon
-    
-        Returns:
-            A polygon in canonical form.
-        """
-        if not polygon:
-            return []
-    
-        canonicalPolygon = []
-    
-        if polygon.exterior.is_ccw:
-            poly_exterior = list(polygon.exterior.coords)
-        else:
-            poly_exterior = list(polygon.exterior.coords)[::-1]
-    
-    
-        holes = []
-        for hole in polygon.interiors:
-            if hole.is_ccw:
-                holes.append(list(polygon.exterior.coords)[::-1])
-            else:
-                holes.append(list(polygon.exterior.coords))
-    
-        canonicalPolygon.append(poly_exterior)
-        canonicalPolygon.append(holes)
-    
-        return canonicalPolygon
-    decomposition = [poly_shapely_to_canonical(poly) for poly in decomposition]
+    new_decomposition = [poly_shapely_to_canonical(poly) for poly in new_decomposition]
 
     print("Old costs: %s"%old_costs)
     print("New costs: %s"%new_costs)
@@ -123,7 +111,7 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     # For this step, need to implement minimum altitude decomposition
     # For now, just plan a path for each robot
     #min_alt_decomposition = []
-    #for polygon in decomposition:
+    #for polygon in new_decomposition:
 
         #from reflex import find_reflex_vertices
         #reflex_verts = reflex.find_reflex_vertices(P)
@@ -141,10 +129,10 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     splot.plot_polygon_outline(ax_old, polygon)
     splot.plot_polygon_outline(ax_new, polygon)
 
-    splot.plot_decomposition(ax_old, old_decomposition)
-    splot.plot_decomposition(ax_new, decomposition)
+    splot.plot_decomposition(ax_old, decomposition)
+    splot.plot_decomposition(ax_new, new_decomposition)
 
-    splot.plot_init_pos_and_assignment(ax_old, cell_to_site_map, old_decomposition)
+    splot.plot_init_pos_and_assignment(ax_old, cell_to_site_map, decomposition)
     splot.plot_init_pos_and_assignment(ax_new, cell_to_site_map, decomposition)
 
     # Send the plot command

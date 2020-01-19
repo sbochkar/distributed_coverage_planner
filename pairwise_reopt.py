@@ -1,7 +1,9 @@
+"""Algorithm for pairwise reoptimization."""
 import logging
+from typing import List, Tuple, Optional
+import sys
 
-from shapely.geometry import Polygon
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Polygon, Point
 
 from numpy import linspace
 from itertools import product
@@ -11,8 +13,8 @@ from polygon_split import polygon_split
 
 
 RADIUS = 0.1
-LINEAR_PENALTY = 1		# Weights for the cost function
-ANGULAR_PENALTY = 10	# Weights for the cost function
+LINEAR_PENALTY = 1        # Weights for the cost function
+ANGULAR_PENALTY = 10    # Weights for the cost function
 
 
 # Configure logging properties for this module
@@ -30,231 +32,214 @@ logger.setLevel(logging.INFO)
 
 
 def poly_shapely_to_canonical(polygon=[]):
-	"""
-	A simple helper function to convert a shapely object representing a polygon
-	intop a cononical form polygon.
+    """
+    A simple helper function to convert a shapely object representing a polygon
+    intop a cononical form polygon.
 
-	Args:
-		polygon: A shapely object representing a polygon
+    Args:
+        polygon: A shapely object representing a polygon
 
-	Returns:
-		A polygon in canonical form.
-	"""
+    Returns:
+        A polygon in canonical form.
+    """
 
-	if not polygon:
-		return []
+    if not polygon:
+        return []
 
-	canonicalPolygon = []
-	
-	if polygon.exterior.is_ccw:
-		polyExterior = list(polygon.exterior.coords)
-	else:
-		polyExterior = list(polygon.exterior.coords)[::-1]
+    canonicalPolygon = []
 
-
-	holes = []
-	for hole in polygon.interiors:
-		if hole.is_ccw:
-			holes.append(list(polygon.exterior.coords)[::-1])
-		else:
-			holes.append(list(polygon.exterior.coords))
-
-	canonicalPolygon.append(polyExterior)
-	canonicalPolygon.append(holes)
-
-	return canonicalPolygon
+    if polygon.exterior.is_ccw:
+        poly_exterior = list(polygon.exterior.coords)
+    else:
+        poly_exterior = list(polygon.exterior.coords)[::-1]
 
 
-def compute_pairwise_optimal(polygonA=[],
-							 polygonB=[],
-							 robotAInitPos=[],
-							 robotBInitPos=[],
-							 nrOfSamples=100,
-							 radius = 0.1,
-							 linPenalty = 1.0,
-							 angPenalty = 10*1.0/360):
-	"""
-	Takes two adjacent polygons and attempts to modify the shared edge such that
-	the metric chi is reduced.
+    holes = []
+    for hole in polygon.interiors:
+        if hole.is_ccw:
+            holes.append(list(polygon.exterior.coords)[::-1])
+        else:
+            holes.append(list(polygon.exterior.coords))
 
-	TODO:
-		Need to investigate assignment of cells to robots.
+    canonicalPolygon.append(poly_exterior)
+    canonicalPolygon.append(holes)
 
-	Args:
-		polygonA: First polygon in canonical form.
-		polygonB: Second polygoni n canonical form.
-		robotAInitPos: Location of robot A.
-		robotBInitPos: Location of robot B.
-		nrOfSamples: Samppling density to be used in the search for optimal cut.
-
-	Returns:
-		Returns the cut that minimizes the maximum chi metrix. Or [] if no such
-		cut exists or original cut is the best.
-	
-	"""
-
-	# The actual algorithm:
-	# 1) Combine the two polygons
-	# 2) Find one cut that works better
-	# 3) Return that cut or no cut if nothing better was found
-
-	if not polygonA or not polygonB:
-		logger.warn("Pairwise reoptimization is requested on an empty polygon.")
-		return []
-
-	if not robotAInitPos or not robotBInitPos:
-		logger.warn("Pairwise reoptimization is requested on an empty init pos.")
-		return []
-
-	if not Polygon(*polygonA).is_valid or not Polygon(*polygonB).is_valid:
-		logger.warn("Pariwise reoptimization is requested on invalid polygons.")
-		return []
-
-	if not Polygon(*polygonA).is_valid or not Polygon(*polygonB).is_valid:
-		logger.warn("Pariwise reoptimization is requested on invalid polygons.")
-		return []
-
-	if not Polygon(*polygonA).is_simple or not Polygon(*polygonB).is_simple:
-		logger.warn("Pariwise reoptimization is requested on nonsimple polygons.")
-		return []
-
-	if not Polygon(*polygonA).touches(Polygon(*polygonB)):
-		logger.warn("Pariwise reoptimization is requested on nontouching polys.")
-		return []
+    return canonicalPolygon
 
 
-	# Check that the polygons intersect only at the boundary and one edge
-	intersection = Polygon(*polygonA).intersection(Polygon(*polygonB))
+def compute_pairwise_optimal(polygon_a: Polygon,
+                             polygon_b: Polygon,
+                             robot_a_init_pos: Point,
+                             robot_b_init_pos: Point,
+                             num_samples: int = 100,
+                             radius: float = 0.1,
+                             lin_penalty: float = 1.0,
+                             ang_penalty: float = 10*1.0/360) -> Optional[Tuple[Polygon]]:
+    """
+    Takes two adjacent polygons and attempts to modify the shared edge such that
+    the metric chi is reduced.
 
+    The actual algorithm:
+        1. Combine the two polygons
+        2. Find one cut that works better
+        3. Return that cut or no cut if nothing better was found
 
-	if type(intersection) is not LineString:
-		logger.warn("Pariwise reoptimization is requested but they don't touch\
-				   at an edge.")
-		return []
+    TODO:
+        Need to investigate assignment of cells to robots.
 
+    Args:
+        polygon_a: First polygon in canonical form.
+        polygon_b: Second polygoni n canonical form.
+        robot_a_init_pos: Location of robot A.
+        robot_b_init_pos: Location of robot B.
+        num_samples: Samppling density to be used in the search for optimal cut.
 
-	# Combine the two polygons
-	polygonUnion = Polygon(*polygonA).union(Polygon(*polygonB))
-    
-    # Also create a copy of polygonUnion in canonical form
-	polygonUnionCanon = poly_shapely_to_canonical(polygonUnion)
+    Returns:
+        Returns the cut that minimizes the maximum chi metrix. Or None if no such
+        cut exists or original cut is the best.
+    """
 
-	if not polygonUnion.is_valid or not polygonUnion.is_simple:
-		logger.warn("Pariwise reoptimization is requested but the union resulted\
-				   in bad polygon.")
-		return []
+    if not polygon_a or not polygon_b:
+        logger.warning("Pairwise reoptimization is requested on an empty polygon.")
+        return None
 
-	if type(polygonUnion) is not Polygon:
-		logger.warn("Pariwise reoptimization is requested but union resulted in\
-				   non polygon.")
-		return []
+    if not robot_a_init_pos or not robot_b_init_pos:
+        logger.warning("Pairwise reoptimization is requested on an empty init pos.")
+        return None
 
+    if not polygon_a.is_valid or not polygon_b.is_valid:
+        logger.warning("Pariwise reoptimization is requested on invalid polygons.")
+        return None
 
+    if not polygon_a.is_valid or not polygon_b.is_valid:
+        logger.warning("Pariwise reoptimization is requested on invalid polygons.")
+        return None
 
-	# Perform intialization stage for the optimization
-	# Initializae the search space as well original cost
-	polyExterior = polygonUnion.exterior
-	searchDistances = list(linspace(0, polyExterior.length, nrOfSamples))
+    if not polygon_a.is_simple or not polygon_b.is_simple:
+        logger.warning("Pariwise reoptimization is requested on nonsimple polygons.")
+        return None
 
-	searchSpace = []
-	for distance in searchDistances:
-		solutionCandidate = polyExterior.interpolate(distance)
-		searchSpace.append((solutionCandidate.x, solutionCandidate.y))
+    if not polygon_a.touches(polygon_b):
+        logger.warning("Pariwise reoptimization is requested on nontouching polys.")
+        return None
 
+    intersection = polygon_a.intersection(polygon_b)
 
-	# Record the costs at this point
-	chiL = compute_chi(polygon = polygonA,
-						initPos = robotAInitPos,
-						radius = radius,
-						linPenalty = linPenalty,
-						angPenalty = angPenalty)
-	chiR = compute_chi(polygon = polygonB,
-						initPos = robotBInitPos,
-						radius = radius,
-						linPenalty = linPenalty,
-						angPenalty = angPenalty)
+    if not isinstance(intersection, LineString):
+        logger.warning("Pariwise reoptimization is requested but they don't touch"
+                       "at an edge.")
+        return None
 
-	initMaxChi = max(chiL, chiR)
+    # Combine the two polygons
+    polygon_union = polygon_a.union(polygon_b)
 
-	minMaxChiFinal = 10e10
-	minCandidate = []
+    if not polygon_union.is_valid or not polygon_union.is_simple:
+        logger.warning("Pariwise reoptimization is requested but the union resulted"
+                       "in bad polygon.")
+        return None
 
-	# This search is over any two pairs of samples points on the exterior
-	# It is a very costly search.
-	for cutEdge in product(searchSpace, repeat=2):
+    if not isinstance(polygon_union, Polygon):
+        logger.warning("Pariwise reoptimization is requested but union resulted in"
+                       "non polygon.")
+        return None
 
-		logger.debug("polygonUnionCanon: %s"%polygonUnionCanon)
-		logger.debug("Cut candidate: %s"%(cutEdge, ))
-		
-		result = polygon_split(polygonUnion, LineString(cutEdge))
+    # This search for better cut is over any two pairs of samples points on the exterior.
+    # The number of points along the exterior is controlled by num_samples.
+    search_space: List[Tuple] = []
+    poly_exterior = polygon_union.exterior
+    for distance in linspace(0, poly_exterior.length, num_samples):
+        solution_candidate = poly_exterior.interpolate(distance)
+        search_space.append((solution_candidate.x, solution_candidate.y))
 
-		if result:
-			logger.debug("%s Split Line: %s"%('GOOD', cutEdge,))
-		else:
-			logger.debug("%s Split Line: %s"%("BAD ", cutEdge))
+    # Record the costs at this point
+    chi_1 = compute_chi(polygon=polygon_a,
+                        init_pos=robot_a_init_pos,
+                        radius=radius,
+                        lin_penalty=lin_penalty,
+                        ang_penalty=ang_penalty)
+    chi_2 = compute_chi(polygon=polygon_b,
+                        init_pos=robot_b_init_pos,
+                        radius=radius,
+                        lin_penalty=lin_penalty,
+                        ang_penalty=ang_penalty)
 
-		if result:
-			# Resolve cell-robot assignments here.
-			# This is to avoid the issue of cell assignments that
-			# don't make any sense after polygon cut.
-			chiA0 = compute_chi(polygon = poly_shapely_to_canonical(result[0]),
-							   	initPos = robotAInitPos,
-							   	radius = radius,
-							   	linPenalty = linPenalty,
-							   	angPenalty = angPenalty)
-			chiA1 = compute_chi(polygon = poly_shapely_to_canonical(result[1]),
-							   	initPos = robotAInitPos,
-							   	radius = radius,
-							   	linPenalty = linPenalty,
-							   	angPenalty = angPenalty)
-			chiB0 = compute_chi(polygon = poly_shapely_to_canonical(result[0]),
-							   	initPos = robotBInitPos,
-							   	radius = radius,
-							   	linPenalty = linPenalty,
-							   	angPenalty = angPenalty)							   	
-			chiB1 = compute_chi(polygon = poly_shapely_to_canonical(result[1]),
-							   	initPos = robotBInitPos,
-							   	radius = radius,
-							   	linPenalty = linPenalty,
-							   	angPenalty = angPenalty)
+    init_max_chi = max(chi_1, chi_2)
 
-			maxChiCases = [max(chiA0, chiB1),
-					  	   max(chiA1, chiB0)]
+    min_max_chi_final = sys.float_info.max
+    min_candidate: Tuple[Tuple]
 
-			minMaxChi = min(maxChiCases)
-			if minMaxChi <= minMaxChiFinal:
-				minCandidate = cutEdge
-				minMaxChiFinal = minMaxChi
+    for cut_edge in product(search_space, repeat=2):
+        logger.debug("Cut candidate: %s", cut_edge)
 
-	logger.debug("Computed min max chi as: %4.2f"%minMaxChiFinal)
-	logger.debug("Cut: %s"%(minCandidate, ))
+        poly_split = polygon_split(polygon_union, LineString(cut_edge))
 
-	if initMaxChi < minMaxChiFinal:
-		logger.debug("No cut results in minimum altitude")
-	
-		return []
+        if poly_split:
+            logger.debug("%s Split Line: %s", 'GOOD', cut_edge)
+        else:
+            logger.debug("%s Split Line: %s", "BAD ", cut_edge)
 
-	newPolygons = polygon_split(polygonUnion, LineString(minCandidate))
-	return newPolygons
+        if poly_split:
+            # Resolve cell-robot assignments here.
+            # This is to avoid the issue of cell assignments that
+            # don't make any sense after polygon cut.
+            chi_a0 = compute_chi(polygon=poly_split[0],
+                                 init_pos=Point(robot_a_init_pos),
+                                 radius=radius,
+                                 lin_penalty=lin_penalty,
+                                 ang_penalty=ang_penalty)
+            chi_a1 = compute_chi(polygon=poly_split[1],
+                                 init_pos=Point(robot_a_init_pos),
+                                 radius=radius,
+                                 lin_penalty=lin_penalty,
+                                 ang_penalty=ang_penalty)
+            chi_b0 = compute_chi(polygon=poly_split[0],
+                                 init_pos=Point(robot_b_init_pos),
+                                 radius=radius,
+                                 lin_penalty=lin_penalty,
+                                 ang_penalty=ang_penalty)
+            chi_b1 = compute_chi(polygon=poly_split[1],
+                                 init_pos=Point(robot_b_init_pos),
+                                 radius=radius,
+                                 lin_penalty=lin_penalty,
+                                 ang_penalty=ang_penalty)
+
+            max_chi_cases = [max(chi_a0, chi_b1),
+                             max(chi_a1, chi_b0)]
+
+            min_max_chi = min(max_chi_cases)
+            if min_max_chi <= min_max_chi_final:
+                min_candidate = cut_edge
+                min_max_chi_final = min_max_chi
+
+    logger.debug("Computed min max chi as: %4.2f", min_max_chi_final)
+    logger.debug("Cut: %s", min_candidate)
+
+    if init_max_chi < min_max_chi_final:
+        logger.debug("No cut results in minimum altitude")
+
+        return None
+
+    new_polygons = polygon_split(polygon_union, LineString(min_candidate))
+    return new_polygons
 
 
 if __name__ == '__main__':
 
-	P1 = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	P2 = [[(1, 0), (2, 0), (2, 1), (1, 1)], []]
-	initA = (0, 0)
-	initB = (1, 0)
-	result = "PASS" if not compute_pairwise_optimal(P1, P2, initA, initB) else "FAIL"
-	print("[%s] Simple two polygon test."%result)
+    P1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+    P2 = Polygon([(1, 0), (2, 0), (2, 1), (1, 1)], [])
+    init_a = Point((0, 0))
+    init_b = Point((1, 0))
+    result = "PASS" if not compute_pairwise_optimal(P1, P2, init_a, init_b) else "FAIL"
+    print("[%s] Simple two polygon test."%result)
 
-	P1 = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	P2 = [[(1, 0), (2, 0), (2, 1), (1, 1)], []]
-	initA = (0, 0)
-	initB = (0, 0)
-	print compute_pairwise_optimal(P1, P2, initA, initB)
+    P1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+    P2 = Polygon([(1, 0), (2, 0), (2, 1), (1, 1)], [])
+    init_a = Point((0, 0))
+    init_b = Point((0, 0))
+    print(compute_pairwise_optimal(P1, P2, init_a, init_b))
 
-	P1 = [[(0, 0), (1, 0), (1, 1), (0, 1)], []]
-	P2 = [[(1, 0), (2, 0), (2, 1), (1, 1)], []]
-	initA = (0, 0)
-	initB = (0, 1)
-	print compute_pairwise_optimal(P1, P2, initA, initB)	
+    P1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], [])
+    P2 = Polygon([(1, 0), (2, 0), (2, 1), (1, 1)], [])
+    init_a = Point((0, 0))
+    init_b = Point((0, 1))
+    print(compute_pairwise_optimal(P1, P2, init_a, init_b))

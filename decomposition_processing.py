@@ -5,79 +5,69 @@ from shapely.geometry import Point
 
 def collinear_correction(decomp):
 
-	for poly in decomp:
-		boundary = poly[0]
-		i = 0
-		while i < len(boundary):
-			p1 = boundary[i]
-			p2 = boundary[(i+1)%len(boundary)]
-			p3 = boundary[(i+2)%len(boundary)]
-			if cuts.collinear(p1, p2, p3):
-				del boundary[(i+1)%len(boundary)]
-			i += 1
+    for poly in decomp:
+        boundary = poly[0]
+        i = 0
+        while i < len(boundary):
+            p1 = boundary[i]
+            p2 = boundary[(i+1)%len(boundary)]
+            p3 = boundary[(i+2)%len(boundary)]
+            if cuts.collinear(p1, p2, p3):
+                del boundary[(i+1)%len(boundary)]
+            i += 1
 
-def compute_adjacency(decomposition=[]):
-	"""
-	Computes an adjacency relation for the polygons in the decomposition.
-	In the effect, computes a graph where the nodes are polygons and the edges
-	represent adjacency between polygons.
+def compute_adjacency(decomposition):
+    """
+    Computes an adjacency relation for the polygons in the decomposition.
+    In the effect, computes a graph where the nodes are polygons and the edges
+    represent adjacency between polygons.
 
-	Assumption:
-		The polygons are considered adjacent if their boundaries intersect at an
-		edge. If they only touch at a point, then will not be considered
-		adjacent.
+    Assumption:
+        The polygons are considered adjacent if their boundaries intersect at an
+        edge. If they only touch at a point, then will not be considered
+        adjacent.
 
-	Params:
-		decomposition: A list of polygons in the canonical form.
+    Params:
+        decomposition: A list of polygons in the canonical form.
 
-	Returns:
-		A 2D list representing adjacency relation between polygons.
-	"""
+    Returns:
+        A 2_d list representing adjacency relation between polygons.
+    """
 
-	# Initialize the 2D matric with None values.
-	adjMatrix = [[False for i in range(len(decomposition))] for i in range(len(decomposition))]
+    # Initialize the 2_d matric with None values.
+    adj_matrix = [[False for i in range(len(decomposition))] for i in range(len(decomposition))]
 
-	for polyAIdx in range(len(decomposition)):
-		for polyBIdx in range(polyAIdx + 1, len(decomposition)):
+    for poly_a_idx in range(len(decomposition)):
+        for poly_b_idx in range(poly_a_idx + 1, len(decomposition)):
 
-			try:
-				polyAShapely = Polygon(*decomposition[polyAIdx])
-				polyBShapely = Polygon(*decomposition[polyBIdx])
-			except:
-				print("Computing adjacency but decomposition contains invalid polygons")
-				return []
+            poly_a = decomposition[poly_a_idx]
+            poly_b = decomposition[poly_b_idx]
+            if not poly_a.touches(poly_b):
+                continue
 
-			if not polyAShapely.touches(polyBShapely):
-				continue
+            intersection = poly_a.intersection(poly_b)
 
-			intersection = polyAShapely.intersection(polyBShapely)
+            if isinstance(intersection, Point):
+                continue
 
-			if type(intersection) is Point:
-				continue
-			else:
-				adjMatrix[polyAIdx][polyBIdx] = True
-				adjMatrix[polyBIdx][polyAIdx] = True
+            adj_matrix[poly_a_idx][poly_b_idx] = True
+            adj_matrix[poly_b_idx][poly_a_idx] = True
 
-	return adjMatrix
+    return adj_matrix
 
 
 if __name__ == '__main__':
 
-	# If package is launched from cmd line, run sanity checks
-	global DEBUG_LEVEL
+    print("\n_sanity tests for pairwise reoptimization.\n")
 
-	DEBUG_LEVEL = 0 #0x8+0x4
+    poly_set = [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)], []),
+                Polygon([(1, 0), (2, 0), (2, 1), (1, 1)], []),
+                Polygon([(1, 1), (2, 1), (2, 2), (1, 2)], []),
+                Polygon([(0, 1), (1, 1), (1, 2), (0, 2)], [])]
+    print(compute_adjacency(poly_set))
 
-	print("\nSanity tests for pairwise reoptimization.\n")
-
-	polySet = [[[(0, 0), (1, 0), (1, 1), (0, 1)], []],
-			   [[(1, 0), (2, 0), (2, 1), (1, 1)], []],
-			   [[(1, 1), (2, 1), (2, 2), (1, 2)], []],
-			   [[(0, 1), (1, 1), (1, 2), (0, 2)], []]]
-	print(compute_adjacency(polySet))
-
-	polySet = [[[(0, 0), (1, 0), (1, 1), (0.5, 0.5), (0, 1)], []],
-			   [[(1, 0), (2, 0), (2, 1), (1, 1)], []],
-			   [[(1, 1), (2, 1), (2, 2), (1, 2)], []],
-			   [[(0, 1), (0.5, 0.5), (1, 1), (1, 2), (0, 2)], []]]
-	print(compute_adjacency(polySet))
+    poly_set = [Polygon([(0, 0), (1, 0), (1, 1), (0.5, 0.5), (0, 1)], []),
+                Polygon([(1, 0), (2, 0), (2, 1), (1, 1)], []),
+                Polygon([(1, 1), (2, 1), (2, 2), (1, 2)], []),
+                Polygon([(0, 1), (0.5, 0.5), (1, 1), (1, 2), (0, 2)], [])]
+    print(compute_adjacency(poly_set))

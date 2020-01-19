@@ -1,3 +1,7 @@
+from typing import List
+
+from decomposition import Decomposition
+
 
 def decomposition_generator(poly_id: int = 0):
     """Hard coded polygons and decompositions
@@ -10,12 +14,26 @@ def decomposition_generator(poly_id: int = 0):
         cell_to_site_map (Dict): Map from cell to starting point of robots.
         decomposition (List): Decomposition of polygon P.
     """
-
+    # pylint: disable=invalid-name
     if poly_id == 0:
-        P = [[(0.0,0.0),(10.0,0.0),(10.0,1.0),(0.0,1.0)],[]]
-        cell_to_site_map = {0: (0,0), 1:(0,0), 2:(0,0), 3:(0,0)}
+        P: List[List] = [[(0.0, 0.0), (10.0, 0.0), (10.0, 1.0), (0.0, 1.0)], []]
+        cell_to_site_map = {0: (0, 0), 1:(0, 0), 2:(0, 0), 3:(0, 0)}
+        decomposition = [[[(0.0, 0.0), (10.0, 0.0), (10.0, 0.5)], []],
+                         [[(0.0, 0.0), (10.0, 0.5), (10.0, 1.0), (5.0, 0.5)], []],
+                         [[(5.0, 0.5), (10.0, 1.0), (0.0, 1.0)], []],
+                         [[(0.0, 0.0), (5.0, 0.5), (0.0, 1.0)], []]]
 
-        decomposition = [[[(0.0,0.0),(10.0,0.0), (10.0,0.5)],[]], [[(0.0,0.0),(10.0,0.5),(10.0,1.0),(5.0,0.5)],[]], [[(5.0,0.5),(10.0,1.0),(0.0,1.0)],[]], [[(0.0,0.0),(5.0,0.5),(0.0,1.0)],[]]]
+        dec = Decomposition(P)
+        dec.add_cell([[(0.0, 0.0), (10.0, 0.0), (10.0, 0.5)], []])
+        dec.add_cell([[(0.0, 0.0), (10.0, 0.5), (10.0, 1.0), (5.0, 0.5)], []])
+        dec.add_cell([[(5.0, 0.5), (10.0, 1.0), (0.0, 1.0)], []])
+        dec.add_cell([[(0.0, 0.0), (5.0, 0.5), (0.0, 1.0)], []])
+        dec.add_robot_site(0, (0., 0.))
+        dec.add_robot_site(1, (0., 0.))
+        dec.add_robot_site(2, (0., 0.))
+        dec.add_robot_site(3, (0., 0.))
+
+        return dec, None, None
 
     elif poly_id == 1:
         P = [[(0.0,0.0),(10.0,0.0),(10.0,1.0),(0.0,1.0)],[]]

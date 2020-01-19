@@ -33,41 +33,6 @@ def pretty_print_decomposition(decomposition):
         print("\n"),
 
 
-def poly_shapely_to_canonical(polygon=[]):
-    """
-    A simple helper function to convert a shapely object representing a polygon
-    intop a cononical form polygon.
-
-    Args:
-        polygon: A shapely object representing a polygon
-
-    Returns:
-        A polygon in canonical form.
-    """
-    if not polygon:
-        return []
-
-    canonicalPolygon = []
-
-    if polygon.exterior.is_ccw:
-        poly_exterior = list(polygon.exterior.coords)
-    else:
-        poly_exterior = list(polygon.exterior.coords)[::-1]
-
-
-    holes = []
-    for hole in polygon.interiors:
-        if hole.is_ccw:
-            holes.append(list(polygon.exterior.coords)[::-1])
-        else:
-            holes.append(list(polygon.exterior.coords))
-
-    canonicalPolygon.append(poly_exterior)
-    canonicalPolygon.append(holes)
-
-    return canonicalPolygon
-
-
 def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     """
     Main function that orchestrates distrubted planner and plots the results.
@@ -82,31 +47,26 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
         poly_id (int): Id of the polygon. Needed to select started polygons.
         num_reopt_iters (int): Run reoptimizer for this many iterations.
     """
-    polygon, cell_to_site_map, decomposition = decomposition_generator(poly_id)
+    # Start visuals
+    # Initialize plotting tools
+    ax_old = splot.init_axis("Original Decomposition", "+0+100")
+    ax_new = splot.init_axis("Reoptimized Decomposition", "+700+100")
+
+
+    #polygon, cell_to_site_map, decomposition = decomposition_generator(poly_id)
+    decomposition, _, _ = decomposition_generator(poly_id)
+    splot.plot_polygon_outline(ax_old, decomposition.canonical_polygon)
+    splot.plot_decomposition(ax_old, decomposition)
+    splot.plot_init_pos_and_assignment(ax_old, decomposition)
 
     logger.info("Reoptimizing polygon: %3d", poly_id)
     logger.info("Attempting %d reoptimization iterations.", num_reopt_iters)
-
-    # TODO: Temporary w.a. until we can switch to Polygon object upstream.
-    # pylint: disable=import-outside-toplevel
-    from copy import deepcopy
-    from shapely.geometry import Polygon, Point
-
-    old_decomposition = deepcopy(decomposition)
-    orig_cell_map = deepcopy(cell_to_site_map)
-
-    decomposition = [Polygon(*poly) for poly in old_decomposition]
-    cell_to_site_map = {key: Point(val) for key, val in orig_cell_map.items()}
 
     optimizer = ChiOptimizer(num_iterations=num_reopt_iters,
                              radius=RADIUS,
                              lin_penalty=LINEAR_PENALTY,
                              ang_penalty=ANGULAR_PENALTY)
-    new_decomposition, old_costs, new_costs = optimizer.run_iterations(decomposition,
-                                                                       cell_to_site_map)
-
-    # TODO: Temporary w.a. until we completely transition to Polygon objects.
-    new_decomposition = [poly_shapely_to_canonical(poly) for poly in new_decomposition]
+    old_costs, new_costs = optimizer.run_iterations(decomposition)
 
     print("Old costs: %s"%old_costs)
     print("New costs: %s"%new_costs)
@@ -115,7 +75,7 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     # For this step, need to implement minimum altitude decomposition
     # For now, just plan a path for each robot
     #min_alt_decomposition = []
-    #for polygon in new_decomposition:
+    #for polygo new_decomposition:
 
         #from reflex import find_reflex_vertices
         #reflex_verts = reflex.find_reflex_vertices(P)
@@ -123,21 +83,10 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
         #min_alt_decomposition.append(min_alt(polygon))
 
 
-
-    # Start visuals
-    # Initialize plotting tools
-    ax_old = splot.init_axis("Original Decomposition", "+0+100")
-    ax_new = splot.init_axis("Reoptimized Decomposition", "+700+100")
-
     # Populate the drawing canvas
-    splot.plot_polygon_outline(ax_old, polygon)
-    splot.plot_polygon_outline(ax_new, polygon)
-
-    splot.plot_decomposition(ax_old, old_decomposition)
-    splot.plot_decomposition(ax_new, new_decomposition)
-
-    splot.plot_init_pos_and_assignment(ax_old, orig_cell_map, old_decomposition)
-    splot.plot_init_pos_and_assignment(ax_new, orig_cell_map, old_decomposition)
+    splot.plot_polygon_outline(ax_new, decomposition.canonical_polygon)
+    splot.plot_decomposition(ax_new, decomposition)
+    splot.plot_init_pos_and_assignment(ax_new, decomposition)
 
     # Send the plot command
     splot.display()

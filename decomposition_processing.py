@@ -35,13 +35,14 @@ def compute_adjacency(decomposition):
     """
 
     # Initialize the 2_d matric with None values.
-    adj_matrix = [[False for i in range(len(decomposition))] for i in range(len(decomposition))]
+    num_cells = len(decomposition.items())
+    adj_matrix = [[False for i in range(num_cells)] for i in range(num_cells)]
 
-    for poly_a_idx in range(len(decomposition)):
-        for poly_b_idx in range(poly_a_idx + 1, len(decomposition)):
+    for poly_a_idx in range(num_cells):
+        for poly_b_idx in range(poly_a_idx + 1, num_cells):
 
-            poly_a = decomposition[poly_a_idx]
-            poly_b = decomposition[poly_b_idx]
+            poly_a, _ = decomposition[poly_a_idx]
+            poly_b, _ = decomposition[poly_b_idx]
             if not poly_a.touches(poly_b):
                 continue
 

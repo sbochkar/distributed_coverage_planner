@@ -62,16 +62,19 @@ def plot_polygon_outline(ax, polygon, fcIdx = 0):
 def plot_decomposition(ax, decomposition):
     """
     Function plots a decomposition (aka a list of polygons)
-    :param ax: Axis object for redundancy
-    :param decomposition: A list of polygons comprosing a decomposition
-    :return: None
+
+    Args:
+        ax: Axis object for redundancy
+        decomposition: A list of polygons comprosing a decomposition
+
+    Return:
+        None
     """
 
     # Plot individual cells
-    for i, polygon in enumerate(decomposition):
+    for i, polygon, _ in decomposition.items():
 
-        polygonShapely = Polygon(*polygon)
-        x, y = polygonShapely.exterior.xy
+        x, y = polygon.exterior.xy
 
         ax.plot(x,
                 y,
@@ -85,7 +88,7 @@ def plot_decomposition(ax, decomposition):
         #ax.annotate(i, (centroid.x, centroid.y))
 
 
-def plot_init_pos_and_assignment(ax, cellToSiteMap, decomposition):
+def plot_init_pos_and_assignment(ax, decomposition):
     """
     Function plots initial positions of the robots
     :param ax: Axis object for redundancy
@@ -95,20 +98,18 @@ def plot_init_pos_and_assignment(ax, cellToSiteMap, decomposition):
     """
 
     colors = ["#00FD91", "#1472FD","#FFA100", "#FF4900"]
-    for idx, position in cellToSiteMap.items():
-        
-        polygonShapely = Polygon(*decomposition[idx])
-        x, y = polygonShapely.exterior.xy
+    for idx, polygon, position in decomposition.items():
+        x, y = polygon.exterior.xy
 
         # Fist plot the initial position as dots
-        ax.scatter(*position,
-                    color = colors[idx],
-                    alpha = 0.9,
-                    linewidth = 10,
-                    zorder = 1)    
+        ax.scatter(position.x, position.y,
+                   color = colors[idx],
+                   alpha = 0.9,
+                   linewidth = 10,
+                   zorder = 1)    
         # Then plot the barely visible patches representing
         #    assignments.
-        patch = PolygonPatch(polygonShapely,
+        patch = PolygonPatch(polygon,
                              alpha = 0.1,
                               fc = colors[idx],
                               ec = '#6699cc',

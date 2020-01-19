@@ -1,5 +1,6 @@
 """High level optimizer that runs iterations."""
 from itertools import product
+from functools import partial
 from typing import Dict, List, Tuple, Optional
 import sys
 
@@ -11,6 +12,7 @@ from utils import time_execution
 from decomposition_processing import compute_adjacency
 from chi import compute_chi
 from polygon_split import polygon_split
+from decomposition import Decomposition
 
 
 class ChiOptimizer():
@@ -22,6 +24,7 @@ class ChiOptimizer():
         'ang_penalty',
         'logger',
         'num_samples',
+        'cost_func',
     )
 
     def __init__(self,
@@ -35,19 +38,24 @@ class ChiOptimizer():
         self.ang_penalty = ang_penalty
         self.logger = get_logger(self.__class__.__name__)
         self.num_samples = 50
+        self.cost_func = partial(compute_chi,
+                                 radius=self.radius,
+                                 lin_penalty=self.lin_penalty,
+                                 ang_penalty=self.ang_penalty)
 
     @time_execution
     def run_iterations(self,
-                       decomposition: List[Polygon],
-                       cell_to_site_map: Dict[int, Point]) -> Tuple[List[Polygon],
-                                                                    List[Tuple[int, float]],
-                                                                    List[Tuple[int, float]]]:
+                       decomposition: Decomposition) -> Tuple[Decomposition,
+                                                              List[Tuple[int, float]],
+                                                              List[Tuple[int, float]]]:
+                       #decomposition: List[Polygon],
+                       #cell_to_site_map: Dict[int, Point]) -> Tuple[List[Polygon],
         """
         Performs pairwise reoptimization on the poylgon with given robot initial
         position.
 
         Args:
-            decomposition: A set of polygon representing the decomposition.
+            decomposition: A set of polygon representing the decomposition. Mutated in this func.
             cell_to_site_map: A mapping between robot and starting location.
         Returns:
             New decomposition
@@ -60,13 +68,11 @@ class ChiOptimizer():
 
             # TODO: Really, chi_costs should be a map.
             chi_costs: List[Tuple[int, float]] = []
-            for idx, poly in enumerate(decomposition):
-                cost = compute_chi(polygon=poly,
-                                   init_pos=cell_to_site_map[idx],
-                                   radius=self.radius,
-                                   lin_penalty=self.lin_penalty,
-                                   ang_penalty=self.ang_penalty)
-                chi_costs.append((idx, cost))
+            #for idx, poly in decomposition.cells.items():
+            #    cost = self.cost_func(polygon=poly, init_pos=decomposition.robot_sites[idx])
+            for cell_id, poly, site in decomposition.items():
+                cost = self.cost_func(polygon=poly, init_pos=site)
+                chi_costs.append((cell_id, cost))
             sorted_chi_costs = sorted(chi_costs, key=lambda v: v[1], reverse=True)
 
             if not original_chi_costs:
@@ -80,32 +86,26 @@ class ChiOptimizer():
 
             if not self.dft_recursion(decomposition,
                                       adjacency_matrix,
-                                      sorted_chi_costs[0][0],
-                                      cell_to_site_map):
+                                      sorted_chi_costs[0][0]):
                 self.logger.debug("Iteration: %3d/%3d: No cut was made!", i, self.num_iterations)
 
             self.logger.debug("[%3d]: %s\n", i + 1, sorted_chi_costs)
 
         chi_costs_: List[Tuple[int, float]] = []
-        for idx, poly in enumerate(decomposition):
-            cost = compute_chi(polygon=poly,
-                               init_pos=cell_to_site_map[idx],
-                               radius=self.radius,
-                               lin_penalty=self.lin_penalty,
-                               ang_penalty=self.ang_penalty)
-            chi_costs_.append((idx, cost))
+        for cell_id, poly, site in decomposition.items():
+            cost = self.cost_func(polygon=poly, init_pos=site)
+            chi_costs_.append((cell_id, cost))
         sorted_chi_costs = sorted(chi_costs, key=lambda v: v[1], reverse=True)
         new_chi_costs = list(sorted_chi_costs)
 
         self.logger.debug("[%3d]: %s\n", i + 1, sorted_chi_costs)
 
-        return decomposition, original_chi_costs, new_chi_costs
+        return original_chi_costs, new_chi_costs
 
     def dft_recursion(self,
-                      decomposition: List[Polygon],
+                      decomposition: Decomposition,
                       adjacency_matrix,
-                      max_vertex_idx: int,
-                      cell_to_site_map: Dict[int, Point]):
+                      max_vertex_idx: int) -> bool:
         """
         This is a recursive function that explores all pairs of cells starting with
         one with the highest cost. The purpose is to re-optimize cuts of adjacent
@@ -123,11 +123,8 @@ class ChiOptimizer():
         Returns:
             True if a succseful reoptimization was performed. False otherwise.
         """
-        max_vertex_cost = compute_chi(polygon=decomposition[max_vertex_idx],
-                                      init_pos=cell_to_site_map[max_vertex_idx],
-                                      radius=self.radius,
-                                      lin_penalty=self.lin_penalty,
-                                      ang_penalty=self.ang_penalty)
+        max_vertex_cost = self.cost_func(polygon=decomposition[max_vertex_idx][0],
+                                         init_pos=decomposition[max_vertex_idx][1])
 
         self.logger.debug("Cell %d has maximum cost of : %f", max_vertex_idx, max_vertex_cost)
 
@@ -140,11 +137,8 @@ class ChiOptimizer():
 
         surrounding_chi_costs = []
         for cell_idx in surrounding_cell_idxs:
-            cost = compute_chi(polygon=decomposition[cell_idx],
-                               init_pos=cell_to_site_map[cell_idx],
-                               radius=self.radius,
-                               lin_penalty=self.lin_penalty,
-                               ang_penalty=self.ang_penalty)
+            cost = self.cost_func(polygon=decomposition[cell_idx][0],
+                                  init_pos=decomposition[cell_idx][1])
             surrounding_chi_costs.append((cell_idx, cost))
 
         sorted_surrounding_chi_costs = sorted(surrounding_chi_costs,
@@ -178,35 +172,23 @@ class ChiOptimizer():
             if cell_chi_cost < max_vertex_cost:
                 self.logger.debug("Attempting reopt %d and %d.", max_vertex_idx, cell_idx)
 
-                result = self.compute_pairwise_optimal(polygon_a=decomposition[max_vertex_idx],
-                                                       polygon_b=decomposition[cell_idx],
-                                                       robot_a_init_pos=cell_to_site_map[max_vertex_idx],
-                                                       robot_b_init_pos=cell_to_site_map[cell_idx])
+                result = self.compute_pairwise_optimal(polygon_a=decomposition[max_vertex_idx][0],
+                                                       polygon_b=decomposition[cell_idx][0],
+                                                       robot_a_init_pos=decomposition[max_vertex_idx][1],
+                                                       robot_b_init_pos=decomposition[cell_idx][1])
 
                 if result:
                     # Resolve cell-robot assignments here.
                     # This is to avoid the issue of cell assignments that
                     # don't make any sense after polygon cut.
-                    chi_a0 = compute_chi(polygon=result[0],
-                                         init_pos=cell_to_site_map[max_vertex_idx],
-                                         radius=self.radius,
-                                         lin_penalty=self.lin_penalty,
-                                         ang_penalty=self.ang_penalty)
-                    chi_a1 = compute_chi(polygon=result[1],
-                                         init_pos=cell_to_site_map[max_vertex_idx],
-                                         radius=self.radius,
-                                         lin_penalty=self.lin_penalty,
-                                         ang_penalty=self.ang_penalty)
-                    chi_b0 = compute_chi(polygon=result[0],
-                                         init_pos=cell_to_site_map[cell_idx],
-                                         radius=self.radius,
-                                         lin_penalty=self.lin_penalty,
-                                         ang_penalty=self.ang_penalty)
-                    chi_b1 = compute_chi(polygon=result[1],
-                                         init_pos=cell_to_site_map[cell_idx],
-                                         radius=self.radius,
-                                         lin_penalty=self.lin_penalty,
-                                         ang_penalty=self.ang_penalty)
+                    chi_a0 = self.cost_func(polygon=result[0],
+                                            init_pos=decomposition[max_vertex_idx][1])
+                    chi_a1 = self.cost_func(polygon=result[1],
+                                            init_pos=decomposition[max_vertex_idx][1])
+                    chi_b0 = self.cost_func(polygon=result[0],
+                                            init_pos=decomposition[cell_idx][1])
+                    chi_b1 = self.cost_func(polygon=result[1],
+                                            init_pos=decomposition[cell_idx][1])
 
                     if max(chi_a0, chi_b1) <= max(chi_a1, chi_b0):
                         decomposition[max_vertex_idx], decomposition[cell_idx] = result
@@ -221,8 +203,7 @@ class ChiOptimizer():
 
                 if self.dft_recursion(decomposition=decomposition,
                                       adjacency_matrix=adjacency_matrix,
-                                      max_vertex_idx=cell_idx,
-                                      cell_to_site_map=cell_to_site_map):
+                                      max_vertex_idx=cell_idx):
                     return True
         return False
 
@@ -307,16 +288,10 @@ class ChiOptimizer():
             search_space.append((solution_candidate.x, solution_candidate.y))
 
         # Record the costs at this point
-        chi_1 = compute_chi(polygon=polygon_a,
-                            init_pos=robot_a_init_pos,
-                            radius=self.radius,
-                            lin_penalty=self.lin_penalty,
-                            ang_penalty=self.ang_penalty)
-        chi_2 = compute_chi(polygon=polygon_b,
-                            init_pos=robot_b_init_pos,
-                            radius=self.radius,
-                            lin_penalty=self.lin_penalty,
-                            ang_penalty=self.ang_penalty)
+        chi_1 = self.cost_func(polygon=polygon_a,
+                               init_pos=robot_a_init_pos)
+        chi_2 = self.cost_func(polygon=polygon_b,
+                               init_pos=robot_b_init_pos)
 
         init_max_chi = max(chi_1, chi_2)
 
@@ -337,26 +312,14 @@ class ChiOptimizer():
                 # Resolve cell-robot assignments here.
                 # This is to avoid the issue of cell assignments that
                 # don't make any sense after polygon cut.
-                chi_a0 = compute_chi(polygon=poly_split[0],
-                                     init_pos=Point(robot_a_init_pos),
-                                     radius=self.radius,
-                                     lin_penalty=self.lin_penalty,
-                                     ang_penalty=self.ang_penalty)
-                chi_a1 = compute_chi(polygon=poly_split[1],
-                                     init_pos=Point(robot_a_init_pos),
-                                     radius=self.radius,
-                                     lin_penalty=self.lin_penalty,
-                                     ang_penalty=self.ang_penalty)
-                chi_b0 = compute_chi(polygon=poly_split[0],
-                                     init_pos=Point(robot_b_init_pos),
-                                     radius=self.radius,
-                                     lin_penalty=self.lin_penalty,
-                                     ang_penalty=self.ang_penalty)
-                chi_b1 = compute_chi(polygon=poly_split[1],
-                                     init_pos=Point(robot_b_init_pos),
-                                     radius=self.radius,
-                                     lin_penalty=self.lin_penalty,
-                                     ang_penalty=self.ang_penalty)
+                chi_a0 = self.cost_func(polygon=poly_split[0],
+                                        init_pos=Point(robot_a_init_pos))
+                chi_a1 = self.cost_func(polygon=poly_split[1],
+                                        init_pos=Point(robot_a_init_pos))
+                chi_b0 = self.cost_func(polygon=poly_split[0],
+                                        init_pos=Point(robot_b_init_pos))
+                chi_b1 = self.cost_func(polygon=poly_split[1],
+                                        init_pos=Point(robot_b_init_pos))
 
                 max_chi_cases = [max(chi_a0, chi_b1),
                                  max(chi_a1, chi_b0)]

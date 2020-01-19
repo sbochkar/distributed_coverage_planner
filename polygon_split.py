@@ -1,4 +1,4 @@
-import logging
+from typing import Optional, Tuple
 
 from shapely.geometry import Point
 from shapely.geometry import MultiPoint
@@ -7,19 +7,11 @@ from shapely.geometry import LineString
 from shapely.geometry import MultiLineString
 from shapely.geometry import LinearRing
 
+from log_utils import get_logger
+
 
 # Configure logging properties for this module
-logger = logging.getLogger("polygonSplit")
-fileHandler = logging.FileHandler("logs/polygonSplit.log")
-streamHandler = logging.StreamHandler()
-logger.addHandler(fileHandler)
-logger.addHandler(streamHandler)
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-fileHandler.setFormatter(formatter)
-streamHandler.setFormatter(formatter)
-logger.setLevel(logging.INFO)
+logger = get_logger("polygon_split")
 
 
 def pretty_print_poly(P=[]):
@@ -60,7 +52,7 @@ def convert_to_canonical(P=[]):
 
     if type(P) is not Polygon:
         logger.warn("Polygon conversion requested but wrong input specified.")
-        return []
+        return None
 
     poly = [[], []]
 
@@ -79,54 +71,23 @@ def convert_to_canonical(P=[]):
     return poly
 
 
-def polygon_split(polygon=[], splitLine=[]):
-    """Split a polygon into two other polygons along splitLine.
+def polygon_split(polygon: Polygon, split_line: LineString) -> Optional[Tuple[Polygon, Polygon]]:
+    """Split a polygon into two other polygons along split_line.
 
     Attempts to split a polygon into two other polygons. Here, a number of
-    assumptions has to be made. That is, that splitLine is a proper line
-    connecting     boundaries of a polygon. Also, that splitLine does not connect
+    assumptions has to be made. That is, that split_line is a proper line
+    connecting     boundaries of a polygon. Also, that split_line does not connect
     outside boundary to a boundary of hole. This is a undefined behaviour.
 
     TODO: With current implementation, it may be possible to do non-decomposing
         cuts. But, some thought needs to be put in.
 
-    @startuml
-
-    (*) --> "Check Inputs"
-    if "OK?" then
-        -->[true] "Intersection boundary with cut"
-        if "Outputs OK?" then
-            --> "Difference boundary with cut"
-            if "Outputs OK?" then
-                -->[true] ===Chunks=== 
-                --> "Form masking polygon"
-                --> "Intersect masking polygon with input polygon"
-                ===Chunks=== --> "Form masking polygon 2"
-                --> "Intersect masking polygon with input polygon"
-                if "Output OK?" then
-                    -->[true] Return both polygons
-                else
-                    -->[false] (*)
-                endif
-            else
-                -->[false] (*)
-            endif
-
-        else
-            -->[false] (*)
-        endif
-        
-
-
-    else
-        -->[false] (*)
-    endif
-
-    @enduml
+    Assumptions:
+        Input polygon and split_line are valid.
 
     Args:
         polygon: Shapely polygon object.
-        splitLine: Shapely LineString object.
+        split_line: Shapely LineString object.
 
     Returns:
         (P1, P2): A tuple of Shapely polygons resulted from the split. If error occured,
@@ -134,84 +95,76 @@ def polygon_split(polygon=[], splitLine=[]):
 
     """
 
-    if not splitLine or not polygon:
-        return []
-
-    if not polygon.is_valid:
-        return []
-
     # This calculates the points on the boundary where the split will happen.
-    extLine = polygon.exterior
-    commonPts = extLine.intersection(splitLine)
-    logger.debug("Cut: %s Intersection: %s"%(splitLine, commonPts))
+    ext_line = polygon.exterior
+    common_pts = ext_line.intersection(split_line)
+    logger.debug("Cut: %s Intersection: %s"%(split_line, common_pts))
 
     # No intersection check.
-    if not commonPts:
-        return []
+    if not common_pts:
+        return None
     # This intersection should always have only 2 points.
-    if type(commonPts) is not MultiPoint:
-        return []
+    if not isinstance(common_pts, MultiPoint):
+        return None
     # Should only ever contain two points.
-    if len(commonPts) != 2:
-        return []
+    if len(common_pts) != 2:
+        return None
     # Split line should be inside polygon.
-    if not splitLine.within(polygon):
-        return []
+    if not split_line.within(polygon):
+        return None
     # Check to see if cut line touches any holes
     for hole in polygon.interiors:
-        if splitLine.intersects(hole):
-            return []
+        if split_line.intersects(hole):
+            return None
 
-
-
-
-    splitBoundary = extLine.difference(splitLine)
-    # Check that splitBoundary is a collection of linestrings
-    if type(splitBoundary) is not MultiLineString:
-        return []
+    split_boundary = ext_line.difference(split_line)
+    # Check that split_boundary is a collection of linestrings
+    if not isinstance(split_boundary, MultiLineString):
+        return None
     # Make sure there are only 2 linestrings in the collection
-    if len(splitBoundary) > 3 or len(splitBoundary) < 2:
-        return []
+    if len(split_boundary) > 3 or len(split_boundary) < 2:
+        return None
 
-    logger.debug("Split boundary: %s"%splitBoundary)
+    logger.debug("Split boundary: %s", split_boundary)
 
     # Even though we use LinearRing, there is no wrap around and diff produces
-    #    3 strings. Need to union. Not sure if combining 1st and last strings 
+    #    3 strings. Need to union. Not sure if combining 1st and last strings
     #    is guaranteed to be the right combo. For now, place a check.
-    if len(splitBoundary) == 3:
-        if splitBoundary[0].coords[0] != splitBoundary[-1].coords[-1]:
+    if len(split_boundary) == 3:
+        if split_boundary[0].coords[0] != split_boundary[-1].coords[-1]:
             logger.warn("The assumption that pts0[0] == pts2[-1] DOES not hold. Need"
-                    "to investigate.")
-            return []
+                        " to investigate.")
+            return None
 
-        line1 = LineString(list(list(splitBoundary[-1].coords)[:-1]+list(splitBoundary[0].coords)))
+        line1 = LineString(
+            list(list(split_boundary[-1].coords)[:-1] + list(split_boundary[0].coords)))
     else:
-        line1 = splitBoundary[0]
-    line2 = splitBoundary[1]
+        line1 = split_boundary[0]
+    line2 = split_boundary[1]
 
 
     if len(line1.coords) < 3 or len(line2.coords) < 3:
-        return []
+        return None
 
     mask1 = Polygon(line1)
     mask2 = Polygon(line2)
 
     if (not mask1.is_valid) or (not mask2.is_valid):
-        return []
+        return None
 
-    resP1Pol = polygon.intersection(mask1)
-    resP2Pol = polygon.intersection(mask2)
+    res_p1_pol = polygon.intersection(mask1)
+    res_p2_pol = polygon.intersection(mask2)
 
-    if type(resP1Pol) is not Polygon:
-        return []
-    if type(resP2Pol) is not Polygon:
-        return []
-    if not resP1Pol.is_valid:
-        return []
-    if not resP2Pol.is_valid:
-        return []
+    if not isinstance(res_p1_pol, Polygon):
+        return None
+    if not isinstance(res_p2_pol, Polygon):
+        return None
+    if not res_p1_pol.is_valid:
+        return None
+    if not res_p2_pol.is_valid:
+        return None
 
-    return resP1Pol, resP2Pol
+    return res_p1_pol, res_p2_pol
 
 
 if __name__ == '__main__':

@@ -54,7 +54,7 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
 
 
     #polygon, cell_to_site_map, decomposition = decomposition_generator(poly_id)
-    decomposition, _, _ = decomposition_generator(poly_id)
+    decomposition = decomposition_generator(poly_id)
     splot.plot_polygon_outline(ax_old, decomposition.canonical_polygon)
     splot.plot_decomposition(ax_old, decomposition)
     splot.plot_init_pos_and_assignment(ax_old, decomposition)
@@ -68,9 +68,13 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
                              ang_penalty=ANGULAR_PENALTY)
     old_costs, new_costs = optimizer.run_iterations(decomposition)
 
-    print("Old costs: %s"%old_costs)
-    print("New costs: %s"%new_costs)
+    # Populate the drawing canvas
+    splot.plot_polygon_outline(ax_new, decomposition.canonical_polygon)
+    splot.plot_decomposition(ax_new, decomposition)
+    splot.plot_init_pos_and_assignment(ax_new, decomposition)
 
+    logger.info("Old costs: %s", old_costs)
+    logger.info("New costs: %s", new_costs)
 
     # For this step, need to implement minimum altitude decomposition
     # For now, just plan a path for each robot
@@ -83,10 +87,6 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
         #min_alt_decomposition.append(min_alt(polygon))
 
 
-    # Populate the drawing canvas
-    splot.plot_polygon_outline(ax_new, decomposition.canonical_polygon)
-    splot.plot_decomposition(ax_new, decomposition)
-    splot.plot_init_pos_and_assignment(ax_new, decomposition)
 
     # Send the plot command
     splot.display()

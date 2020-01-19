@@ -3,10 +3,10 @@ from typing import Dict, List, Tuple
 
 from shapely.geometry import LineString, Polygon, Point
 
+from log_utils import get_logger
 from decomposition_processing import compute_adjacency
 from chi import compute_chi
-from reopt_recursion import dft_recursion
-from log_utils import get_logger
+from pairwise_reopt import compute_pairwise_optimal
 
 
 class ChiOptimizer():
@@ -70,13 +70,10 @@ class ChiOptimizer():
 
             adjacency_matrix = compute_adjacency(decomposition)
 
-            if not dft_recursion(decomposition,
+            if not self.dft_recursion(decomposition,
                                  adjacency_matrix,
                                  sorted_chi_costs[0][0],
-                                 cell_to_site_map,
-                                 self.radius,
-                                 self.lin_penalty,
-                                 self.ang_penalty):
+                                 cell_to_site_map):
                 self.logger.debug("Iteration: %3d/%3d: No cut was made!", i, self.num_iterations)
 
             self.logger.debug("[%3d]: %s\n", i + 1, sorted_chi_costs)
@@ -95,3 +92,133 @@ class ChiOptimizer():
         self.logger.debug("[%3d]: %s\n", i + 1, sorted_chi_costs)
 
         return decomposition, original_chi_costs, new_chi_costs
+
+    def dft_recursion(self,
+                      decomposition,
+                      adjacency_matrix,
+                      max_vertex_idx: int,
+                      cell_to_site_map: Dict):
+        """
+        This is a recursive function that explores all pairs of cells starting with
+        one with the highest cost. The purpose is to re-optimize cuts of adjacent
+        cells such that the maximum cost over all cells in the map is minimized.
+
+        Assumption:
+            The adjacency value for a cell with iteself should be None
+
+        Params:
+            decomposition: A decomposition as a list of polygons.
+            adjacency_matrix: A matrix representing adjacency relationships between
+                             cells in the decomposition.
+            max_vertex_idx: Index of a cell in the decomposition with the maximum cost.
+
+        Returns:
+            True if a succseful reoptimization was performed. False otherwise.
+        """
+
+        max_vertex_cost = compute_chi(polygon=decomposition[max_vertex_idx],
+                                      init_pos=cell_to_site_map[max_vertex_idx],
+                                      radius=self.radius,
+                                      lin_penalty=self.lin_penalty,
+                                      ang_penalty=self.ang_penalty)
+
+        self.logger.debug("Cell %d has maximum cost of : %f", max_vertex_idx, max_vertex_cost)
+
+        surrounding_cell_idxs = []
+        for cell_idx, is_adjacent in enumerate(adjacency_matrix[max_vertex_idx]):
+            if is_adjacent:
+                surrounding_cell_idxs.append(cell_idx)
+
+        self.logger.debug("Surrounding Cell Idxs: %s", surrounding_cell_idxs)
+
+        surrounding_chi_costs = []
+        for cell_idx in surrounding_cell_idxs:
+            cost = compute_chi(polygon=decomposition[cell_idx],
+                               init_pos=cell_to_site_map[cell_idx],
+                               radius=self.radius,
+                               lin_penalty=self.lin_penalty,
+                               ang_penalty=self.ang_penalty)
+            surrounding_chi_costs.append((cell_idx, cost))
+
+        sorted_surrounding_chi_costs = sorted(surrounding_chi_costs,
+                                              key=lambda v: v[1],
+                                              reverse=False)
+        self.logger.debug("Neghbours and chi: %s", sorted_surrounding_chi_costs)
+
+        # Idea: For a given cell with maximum cost, search all the neighbors
+        #        and sort them based on their chi cost.
+        #
+        #        Starting with the neighbor with the lowest cost, attempt to
+        #        reoptimize the cut seperating them in hopes of minimizing the max
+        #        chi of the two cells.
+        #
+        #        If the reoptimization was succesful then stop recursion and complete
+        #        the iteration.
+        #
+        #        If the reoptimization was not succesful then it is possible that we
+        #        are in a local minimum and we need to disturb the search in hopes
+        #        of finiding a better solution.
+        #
+        #        For that purpose, we call the recursive function on the that
+        #        neighboring cell. And so on.
+        #
+        #        If the recursive function for that neighboring cell does not yield
+        #        a reoptimization then we pick the next lowest neighbor and attempt
+        #        recursive reoptimization. This ensures DFT of the adjacency graph.
+
+        for cell_idx, cell_chi_cost in sorted_surrounding_chi_costs:
+
+            if cell_chi_cost < max_vertex_cost:
+                self.logger.debug("Attempting reopt %d and %d.", max_vertex_idx, cell_idx)
+
+                result = compute_pairwise_optimal(polygon_a=decomposition[max_vertex_idx],
+                                                  polygon_b=decomposition[cell_idx],
+                                                  robot_a_init_pos=cell_to_site_map[max_vertex_idx],
+                                                  robot_b_init_pos=cell_to_site_map[cell_idx],
+                                                  num_samples=50,
+                                                  radius=self.radius,
+                                                  lin_penalty=self.lin_penalty,
+                                                  ang_penalty=self.ang_penalty)
+
+                if result:
+                    # Resolve cell-robot assignments here.
+                    # This is to avoid the issue of cell assignments that
+                    # don't make any sense after polygon cut.
+                    chi_a0 = compute_chi(polygon=result[0],
+                                         init_pos=cell_to_site_map[max_vertex_idx],
+                                         radius=self.radius,
+                                         lin_penalty=self.lin_penalty,
+                                         ang_penalty=self.ang_penalty)
+                    chi_a1 = compute_chi(polygon=result[1],
+                                         init_pos=cell_to_site_map[max_vertex_idx],
+                                         radius=self.radius,
+                                         lin_penalty=self.lin_penalty,
+                                         ang_penalty=self.ang_penalty)
+                    chi_b0 = compute_chi(polygon=result[0],
+                                         init_pos=cell_to_site_map[cell_idx],
+                                         radius=self.radius,
+                                         lin_penalty=self.lin_penalty,
+                                         ang_penalty=self.ang_penalty)
+                    chi_b1 = compute_chi(polygon=result[1],
+                                         init_pos=cell_to_site_map[cell_idx],
+                                         radius=self.radius,
+                                         lin_penalty=self.lin_penalty,
+                                         ang_penalty=self.ang_penalty)
+
+                    if max(chi_a0, chi_b1) <= max(chi_a1, chi_b0):
+                        decomposition[max_vertex_idx], decomposition[cell_idx] = result
+                    else:
+                        decomposition[cell_idx], decomposition[max_vertex_idx] = result
+
+                    self.logger.debug("Cells %d and %d reopted.", max_vertex_idx, cell_idx)
+
+                    adjacency_matrix = compute_adjacency(decomposition)
+
+                    return True
+
+                if self.dft_recursion(decomposition=decomposition,
+                                      adjacency_matrix=adjacency_matrix,
+                                      max_vertex_idx=cell_idx,
+                                      cell_to_site_map=cell_to_site_map):
+                    return True
+        return False

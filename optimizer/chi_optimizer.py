@@ -1,15 +1,19 @@
 """High level optimizer that runs iterations."""
-from typing import Dict, List, Tuple
+from itertools import product
+from typing import Dict, List, Tuple, Optional
+import sys
 
+from numpy import linspace
 from shapely.geometry import LineString, Polygon, Point
 
 from log_utils import get_logger
 from decomposition_processing import compute_adjacency
 from chi import compute_chi
-from pairwise_reopt import compute_pairwise_optimal
+from polygon_split import polygon_split
 
 
 class ChiOptimizer():
+    """Main functionality of the optimizer."""
     __slots__ = (
         'num_iterations',
         'radius',
@@ -71,9 +75,9 @@ class ChiOptimizer():
             adjacency_matrix = compute_adjacency(decomposition)
 
             if not self.dft_recursion(decomposition,
-                                 adjacency_matrix,
-                                 sorted_chi_costs[0][0],
-                                 cell_to_site_map):
+                                      adjacency_matrix,
+                                      sorted_chi_costs[0][0],
+                                      cell_to_site_map):
                 self.logger.debug("Iteration: %3d/%3d: No cut was made!", i, self.num_iterations)
 
             self.logger.debug("[%3d]: %s\n", i + 1, sorted_chi_costs)
@@ -94,10 +98,10 @@ class ChiOptimizer():
         return decomposition, original_chi_costs, new_chi_costs
 
     def dft_recursion(self,
-                      decomposition,
+                      decomposition: List[Polygon],
                       adjacency_matrix,
                       max_vertex_idx: int,
-                      cell_to_site_map: Dict):
+                      cell_to_site_map: Dict[int, Point]):
         """
         This is a recursive function that explores all pairs of cells starting with
         one with the highest cost. The purpose is to re-optimize cuts of adjacent
@@ -115,7 +119,6 @@ class ChiOptimizer():
         Returns:
             True if a succseful reoptimization was performed. False otherwise.
         """
-
         max_vertex_cost = compute_chi(polygon=decomposition[max_vertex_idx],
                                       init_pos=cell_to_site_map[max_vertex_idx],
                                       radius=self.radius,
@@ -171,14 +174,11 @@ class ChiOptimizer():
             if cell_chi_cost < max_vertex_cost:
                 self.logger.debug("Attempting reopt %d and %d.", max_vertex_idx, cell_idx)
 
-                result = compute_pairwise_optimal(polygon_a=decomposition[max_vertex_idx],
-                                                  polygon_b=decomposition[cell_idx],
-                                                  robot_a_init_pos=cell_to_site_map[max_vertex_idx],
-                                                  robot_b_init_pos=cell_to_site_map[cell_idx],
-                                                  num_samples=50,
-                                                  radius=self.radius,
-                                                  lin_penalty=self.lin_penalty,
-                                                  ang_penalty=self.ang_penalty)
+                result = self.compute_pairwise_optimal(polygon_a=decomposition[max_vertex_idx],
+                                                       polygon_b=decomposition[cell_idx],
+                                                       robot_a_init_pos=cell_to_site_map[max_vertex_idx],
+                                                       robot_b_init_pos=cell_to_site_map[cell_idx],
+                                                       num_samples=50)
 
                 if result:
                     # Resolve cell-robot assignments here.
@@ -222,3 +222,156 @@ class ChiOptimizer():
                                       cell_to_site_map=cell_to_site_map):
                     return True
         return False
+
+    def compute_pairwise_optimal(self,
+                                 polygon_a: Polygon,
+                                 polygon_b: Polygon,
+                                 robot_a_init_pos: Point,
+                                 robot_b_init_pos: Point,
+                                 num_samples: int = 100) -> Optional[Tuple[Polygon]]:
+        """
+        Takes two adjacent polygons and attempts to modify the shared edge such that
+        the metric chi is reduced.
+
+        The actual algorithm:
+            1. Combine the two polygons
+            2. Find one cut that works better
+            3. Return that cut or no cut if nothing better was found
+
+        TODO:
+            Need to investigate assignment of cells to robots.
+
+        Args:
+            polygon_a: First polygon in canonical form.
+            polygon_b: Second polygoni n canonical form.
+            robot_a_init_pos: Location of robot A.
+            robot_b_init_pos: Location of robot B.
+            num_samples: Samppling density to be used in the search for optimal cut.
+
+        Returns:
+            Returns the cut that minimizes the maximum chi metrix. Or None if no such
+            cut exists or original cut is the best.
+        """
+
+        if not polygon_a or not polygon_b:
+            self.logger.warning("Pairwise reoptimization is requested on an empty polygon.")
+            return None
+
+        if not robot_a_init_pos or not robot_b_init_pos:
+            self.logger.warning("Pairwise reoptimization is requested on an empty init pos.")
+            return None
+
+        if not polygon_a.is_valid or not polygon_b.is_valid:
+            self.logger.warning("Pariwise reoptimization is requested on invalid polygons.")
+            return None
+
+        if not polygon_a.is_valid or not polygon_b.is_valid:
+            self.logger.warning("Pariwise reoptimization is requested on invalid polygons.")
+            return None
+
+        if not polygon_a.is_simple or not polygon_b.is_simple:
+            self.logger.warning("Pariwise reoptimization is requested on nonsimple polygons.")
+            return None
+
+        if not polygon_a.touches(polygon_b):
+            self.logger.warning("Pariwise reoptimization is requested on nontouching polys.")
+            return None
+
+        intersection = polygon_a.intersection(polygon_b)
+
+        if not isinstance(intersection, LineString):
+            self.logger.warning("Pariwise reoptimization is requested but they don't touch"
+                                " at an edge.")
+            return None
+
+        # Combine the two polygons
+        polygon_union = polygon_a.union(polygon_b)
+
+        if not polygon_union.is_valid or not polygon_union.is_simple:
+            self.logger.warning("Pariwise reoptimization is requested but the union resulted"
+                                " in bad polygon.")
+            return None
+
+        if not isinstance(polygon_union, Polygon):
+            self.logger.warning("Pariwise reoptimization is requested but union resulted in"
+                                " non polygon.")
+            return None
+
+        # This search for better cut is over any two pairs of samples points on the exterior.
+        # The number of points along the exterior is controlled by num_samples.
+        search_space: List[Tuple] = []
+        poly_exterior = polygon_union.exterior
+        for distance in linspace(0, poly_exterior.length, num_samples):
+            solution_candidate = poly_exterior.interpolate(distance)
+            search_space.append((solution_candidate.x, solution_candidate.y))
+
+        # Record the costs at this point
+        chi_1 = compute_chi(polygon=polygon_a,
+                            init_pos=robot_a_init_pos,
+                            radius=self.radius,
+                            lin_penalty=self.lin_penalty,
+                            ang_penalty=self.ang_penalty)
+        chi_2 = compute_chi(polygon=polygon_b,
+                            init_pos=robot_b_init_pos,
+                            radius=self.radius,
+                            lin_penalty=self.lin_penalty,
+                            ang_penalty=self.ang_penalty)
+
+        init_max_chi = max(chi_1, chi_2)
+
+        min_max_chi_final = sys.float_info.max
+        min_candidate: Tuple[Tuple]
+
+        for cut_edge in product(search_space, repeat=2):
+            self.logger.debug("Cut candidate: %s", cut_edge)
+
+            poly_split = polygon_split(polygon_union, LineString(cut_edge))
+
+            if poly_split:
+                self.logger.debug("%s Split Line: %s", 'GOOD', cut_edge)
+            else:
+                self.logger.debug("%s Split Line: %s", "BAD ", cut_edge)
+
+            if poly_split:
+                # Resolve cell-robot assignments here.
+                # This is to avoid the issue of cell assignments that
+                # don't make any sense after polygon cut.
+                chi_a0 = compute_chi(polygon=poly_split[0],
+                                     init_pos=Point(robot_a_init_pos),
+                                     radius=self.radius,
+                                     lin_penalty=self.lin_penalty,
+                                     ang_penalty=self.ang_penalty)
+                chi_a1 = compute_chi(polygon=poly_split[1],
+                                     init_pos=Point(robot_a_init_pos),
+                                     radius=self.radius,
+                                     lin_penalty=self.lin_penalty,
+                                     ang_penalty=self.ang_penalty)
+                chi_b0 = compute_chi(polygon=poly_split[0],
+                                     init_pos=Point(robot_b_init_pos),
+                                     radius=self.radius,
+                                     lin_penalty=self.lin_penalty,
+                                     ang_penalty=self.ang_penalty)
+                chi_b1 = compute_chi(polygon=poly_split[1],
+                                     init_pos=Point(robot_b_init_pos),
+                                     radius=self.radius,
+                                     lin_penalty=self.lin_penalty,
+                                     ang_penalty=self.ang_penalty)
+
+                max_chi_cases = [max(chi_a0, chi_b1),
+                                 max(chi_a1, chi_b0)]
+
+                min_max_chi = min(max_chi_cases)
+                if min_max_chi <= min_max_chi_final:
+                    min_candidate = cut_edge
+                    min_max_chi_final = min_max_chi
+
+        self.logger.debug("Computed min max chi as: %4.2f", min_max_chi_final)
+        self.logger.debug("Cut: %s", min_candidate)
+
+        if init_max_chi < min_max_chi_final:
+            self.logger.debug("No cut results in minimum altitude")
+
+            return None
+
+        new_polygons = polygon_split(polygon_union, LineString(min_candidate))
+        return new_polygons

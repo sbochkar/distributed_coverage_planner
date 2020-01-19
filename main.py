@@ -84,19 +84,26 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     """
     polygon, cell_to_site_map, decomposition = decomposition_generator(poly_id)
 
-    old_costs: List[float] = []
-    new_costs: List[float] = []
-
     logger.info("Reoptimizing polygon: %3d", poly_id)
     logger.info("Attempting %d reoptimization iterations.", num_reopt_iters)
+
+    # TODO: Temporary w.a. until we can switch to Polygon object upstream.
+    # pylint: disable=import-outside-toplevel
+    from copy import deepcopy
+    from shapely.geometry import Polygon, Point
+
+    old_decomposition = deepcopy(decomposition)
+    orig_cell_map = deepcopy(cell_to_site_map)
+
+    decomposition = [Polygon(*poly) for poly in old_decomposition]
+    cell_to_site_map = {key: Point(val) for key, val in orig_cell_map.items()}
+
     optimizer = ChiOptimizer(num_iterations=num_reopt_iters,
                              radius=RADIUS,
                              lin_penalty=LINEAR_PENALTY,
                              ang_penalty=ANGULAR_PENALTY)
-    new_decomposition = optimizer.run_iterations(decomposition,
-                                                 cell_to_site_map,
-                                                 old_costs,
-                                                 new_costs)
+    new_decomposition, old_costs, new_costs = optimizer.run_iterations(decomposition,
+                                                                       cell_to_site_map)
 
     # TODO: Temporary w.a. until we completely transition to Polygon objects.
     new_decomposition = [poly_shapely_to_canonical(poly) for poly in new_decomposition]
@@ -126,11 +133,11 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     splot.plot_polygon_outline(ax_old, polygon)
     splot.plot_polygon_outline(ax_new, polygon)
 
-    splot.plot_decomposition(ax_old, decomposition)
+    splot.plot_decomposition(ax_old, old_decomposition)
     splot.plot_decomposition(ax_new, new_decomposition)
 
-    splot.plot_init_pos_and_assignment(ax_old, cell_to_site_map, decomposition)
-    splot.plot_init_pos_and_assignment(ax_new, cell_to_site_map, decomposition)
+    splot.plot_init_pos_and_assignment(ax_old, orig_cell_map, old_decomposition)
+    splot.plot_init_pos_and_assignment(ax_new, orig_cell_map, old_decomposition)
 
     # Send the plot command
     splot.display()

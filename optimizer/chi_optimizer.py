@@ -7,6 +7,7 @@ from numpy import linspace
 from shapely.geometry import LineString, Polygon, Point
 
 from log_utils import get_logger
+from utils import time_execution
 from decomposition_processing import compute_adjacency
 from chi import compute_chi
 from polygon_split import polygon_split
@@ -20,6 +21,7 @@ class ChiOptimizer():
         'lin_penalty',
         'ang_penalty',
         'logger',
+        'num_samples',
     )
 
     def __init__(self,
@@ -32,7 +34,9 @@ class ChiOptimizer():
         self.lin_penalty = lin_penalty
         self.ang_penalty = ang_penalty
         self.logger = get_logger(self.__class__.__name__)
+        self.num_samples = 50
 
+    @time_execution
     def run_iterations(self,
                        decomposition: List[Polygon],
                        cell_to_site_map: Dict[int, Point]) -> Tuple[List[Polygon],
@@ -177,8 +181,7 @@ class ChiOptimizer():
                 result = self.compute_pairwise_optimal(polygon_a=decomposition[max_vertex_idx],
                                                        polygon_b=decomposition[cell_idx],
                                                        robot_a_init_pos=cell_to_site_map[max_vertex_idx],
-                                                       robot_b_init_pos=cell_to_site_map[cell_idx],
-                                                       num_samples=50)
+                                                       robot_b_init_pos=cell_to_site_map[cell_idx])
 
                 if result:
                     # Resolve cell-robot assignments here.
@@ -227,8 +230,7 @@ class ChiOptimizer():
                                  polygon_a: Polygon,
                                  polygon_b: Polygon,
                                  robot_a_init_pos: Point,
-                                 robot_b_init_pos: Point,
-                                 num_samples: int = 100) -> Optional[Tuple[Polygon]]:
+                                 robot_b_init_pos: Point) -> Optional[Tuple[Polygon]]:
         """
         Takes two adjacent polygons and attempts to modify the shared edge such that
         the metric chi is reduced.
@@ -246,7 +248,6 @@ class ChiOptimizer():
             polygon_b: Second polygoni n canonical form.
             robot_a_init_pos: Location of robot A.
             robot_b_init_pos: Location of robot B.
-            num_samples: Samppling density to be used in the search for optimal cut.
 
         Returns:
             Returns the cut that minimizes the maximum chi metrix. Or None if no such
@@ -301,7 +302,7 @@ class ChiOptimizer():
         # The number of points along the exterior is controlled by num_samples.
         search_space: List[Tuple] = []
         poly_exterior = polygon_union.exterior
-        for distance in linspace(0, poly_exterior.length, num_samples):
+        for distance in linspace(0, poly_exterior.length, self.num_samples):
             solution_candidate = poly_exterior.interpolate(distance)
             search_space.append((solution_candidate.x, solution_candidate.y))
 

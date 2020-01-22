@@ -178,7 +178,7 @@ class ChiOptimizer():
                     if max(chi_a0, chi_b1) <= max(chi_a1, chi_b0):
                         decomposition[max_vertex_id], decomposition[cell_id] = result
                     else:
-                        decomposition[cell_idx], decomposition[max_vertex_id] = result
+                        decomposition[cell_id], decomposition[max_vertex_id] = result
 
                     self.logger.debug("Cells %d and %d reopted.", max_vertex_id, cell_id)
 

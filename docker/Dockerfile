@@ -11,4 +11,4 @@ RUN apt-get update && \
         shapely \
         matplotlib \
         descartes \
-        py2d
+        py2d-fixed

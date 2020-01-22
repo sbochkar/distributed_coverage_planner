@@ -72,12 +72,11 @@ def plot_decomposition(ax, decomposition):
     """
 
     # Plot individual cells
-    for i, polygon, _ in decomposition.items():
+    for i, polygon in decomposition.cells.items():
 
         x, y = polygon.exterior.xy
 
-        ax.plot(x,
-                y,
+        ax.plot(x, y,
                 color = '#6699cc',
                 alpha = 0.7,
                 linewidth = 3,

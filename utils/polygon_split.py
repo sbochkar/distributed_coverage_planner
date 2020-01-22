@@ -14,63 +14,6 @@ from log_utils import get_logger
 logger = get_logger("polygon_split")
 
 
-def pretty_print_poly(P=[]):
-    """Pretty prints cannonical polygons to help with debugging
-
-    Args:
-        P: Polygon in canonical form.
-
-    Returns:
-        None
-    """
-
-    print("Polygon:\n\tExterior:\n\t\t"),
-
-    for pts in P[0]:
-        # Need to make sure to round some pts for nice display
-        print("(%3.1f, %3.1f), "%(pts[0], pts[1])),
-    print("")
-    holeCnt = 0
-    for hole in P[1]:
-        print("\tHole %d:\n\t\t"%holeCnt),
-        for pts in hole:
-            # Need to make sure to round some pts for nice display
-            print("(%3.1f, %3.1f),"%(pts[0], pts[1])),
-        print("")
-        holeCnt += 1
-
-
-def convert_to_canonical(P=[]):
-    """Convertion function to convert from shapely object to canonical form.
-
-    Args:
-        P: Shapely object representing a polygon.
-
-    Returns:
-        poly: A polygon represented in canonical form. [] otherwise.
-    """
-
-    if type(P) is not Polygon:
-        logger.warn("Polygon conversion requested but wrong input specified.")
-        return None
-
-    poly = [[], []]
-
-    if not LinearRing(P.exterior.coords).is_ccw:
-        poly[0] = list(P.exterior.coords)[::-1][:-1]
-    else:
-        poly[0] = list(P.exterior.coords)[:-1]
-
-    for hole in P.interiors:
-
-        if LinearRing(hole.coords).is_ccw:
-            poly[1].append(list(hole.coords)[::-1][:-1])
-        else:
-            poly[1].append(list(hole.coords)[:-1])
-
-    return poly
-
-
 def polygon_split(polygon: Polygon, split_line: LineString) -> Optional[Tuple[Polygon, Polygon]]:
     """Split a polygon into two other polygons along split_line.
 

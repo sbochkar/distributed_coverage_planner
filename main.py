@@ -2,6 +2,7 @@
 import sys
 
 from utils.polygons import decomposition_generator
+from utils import greedy_decomposition
 from optimizer import ChiOptimizer
 from log_utils import get_logger
 import visuals.coverage_plot as splot
@@ -74,15 +75,10 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     logger.info("Old costs: %s", old_costs)
     logger.info("New costs: %s", new_costs)
 
-    # For this step, need to implement minimum altitude decomposition
-    # For now, just plan a path for each robot
-    #min_alt_decomposition = []
-    #for polygo new_decomposition:
-
-        #from reflex import find_reflex_vertices
-        #reflex_verts = reflex.find_reflex_vertices(P)
-        #compute_min_alt_cut(polygon, reflex_vertex)
-        #min_alt_decomposition.append(min_alt(polygon))
+    # Each cell is further decomposition for path planning purposes.
+    for cell_id, polygon, site in decomposition.items():
+        ax_cvx = splot.init_axis("Convex Decomposition", "+0+100")
+        dec = greedy_decomposition(polygon)
 
 
 

@@ -1,43 +1,10 @@
 """Defining decomposition class."""
 from copy import deepcopy
-from typing import Dict, List, Tuple, Iterable
+from typing import Dict, List, Tuple
 
 from shapely.geometry import Polygon, Point
 
-
-def poly_shapely_to_canonical(polygon):
-    """
-    A simple helper function to convert a shapely object representing a polygon
-    intop a cononical form polygon.
-
-    Args:
-        polygon: A shapely object representing a polygon
-
-    Returns:
-        A polygon in canonical form.
-    """
-    if not polygon:
-        return []
-
-    canonical_polygon = []
-
-    if polygon.exterior.is_ccw:
-        poly_exterior = list(polygon.exterior.coords)
-    else:
-        poly_exterior = list(polygon.exterior.coords)[::-1]
-
-
-    holes = []
-    for hole in polygon.interiors:
-        if hole.is_ccw:
-            holes.append(list(polygon.exterior.coords)[::-1])
-        else:
-            holes.append(list(polygon.exterior.coords))
-
-    canonical_polygon.append(poly_exterior)
-    canonical_polygon.append(holes)
-
-    return canonical_polygon
+from utils import shapely_poly_to_canonical
 
 
 class Decomposition():
@@ -107,7 +74,7 @@ class Decomposition():
 
     def __setitem__(self, key: int, val: Polygon):
         self.cells[key] = val
-        self.canonical_cells[key] = poly_shapely_to_canonical(val)
+        self.canonical_cells[key] = shapely_poly_to_canonical(val)
 
     def items(self) -> List:
         return [(key, val, self.robot_sites[key]) for key, val in self.cells.items()]

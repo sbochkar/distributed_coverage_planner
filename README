@@ -1,3 +1,4 @@
 Distributed path planner.
 
-Entry point at main.py
+Provided Dockerfile should have all the dependencies.
+Launch via `python main.py POLYGON_ID`

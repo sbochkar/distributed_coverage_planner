@@ -1,12 +1,10 @@
 """Entry point for distributed planner"""
-from typing import List
 import sys
 
-import coverage_plot as splot
-
-from polygons import decomposition_generator
+from utils.polygons import decomposition_generator
 from optimizer import ChiOptimizer
 from log_utils import get_logger
+import visuals.coverage_plot as splot
 
 
 GLKH_LOCATION = "/home//misc/GLKH-1.0/"

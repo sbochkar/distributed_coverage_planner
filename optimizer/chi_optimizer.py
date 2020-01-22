@@ -8,11 +8,9 @@ from numpy import linspace
 from shapely.geometry import LineString, Polygon, Point
 
 from log_utils import get_logger
-from utils import time_execution
-from decomposition_processing import compute_adjacency
-from chi import compute_chi
-from polygon_split import polygon_split
-from decomposition import Decomposition
+from utils import time_execution, polygon_split
+from decomposition import Decomposition, compute_adjacency
+from metrics.chi import compute_chi
 
 
 class ChiOptimizer():

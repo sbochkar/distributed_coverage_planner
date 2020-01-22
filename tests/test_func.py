@@ -4,7 +4,7 @@ import unittest
 from shapely.geometry import Polygon, Point
 from shapely.geometry import LineString
 
-from polygon_split import polygon_split
+from utils.polygon_split import polygon_split
 from pairwise_reopt import compute_pairwise_optimal
 
 # Test suite for polygon split function

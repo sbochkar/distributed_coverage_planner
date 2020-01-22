@@ -10,4 +10,5 @@ RUN apt-get update && \
     && pip3 install \
         shapely \
         matplotlib \
-        descartes
+        descartes \
+        py2d

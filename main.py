@@ -75,10 +75,11 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     logger.info("Old costs: %s", old_costs)
     logger.info("New costs: %s", new_costs)
 
-    # Each cell is further decomposition for path planning purposes.
-    for cell_id, polygon, site in decomposition.items():
-        ax_cvx = splot.init_axis("Convex Decomposition", "+0+100")
-        dec = greedy_decomposition(polygon)
+    # # Each cell is further decomposition for path planning purposes.
+    # ax_cvx = splot.init_axis("Convex Decomposition", "+0+100")
+    # for cell_id, polygon, site in decomposition.items():
+    #     dec = greedy_decomposition(polygon)
+    #     splot.plot_decomposition(ax_cvx, dec)
 
 
 

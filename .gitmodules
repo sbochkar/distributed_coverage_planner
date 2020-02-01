@@ -1,0 +1,3 @@
+[submodule "coverage_path_planning"]
+	path = coverage_path_planning
+	url = https://github.com/sbochkar/coverage_path_planning.git

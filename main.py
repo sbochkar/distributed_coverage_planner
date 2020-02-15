@@ -2,10 +2,13 @@
 import sys
 
 from utils.polygons import decomposition_generator
-from utils import greedy_decomposition
 from optimizer import ChiOptimizer
 from log_utils import get_logger
 import visuals.coverage_plot as splot
+
+sys.path.append('coverage_path_planning/')
+from coverage_path_planning import Robot, coverage_path_planner
+from coverage_path_planning.pkg.visuals.static	import coverage_plot as single_splot
 
 
 GLKH_LOCATION = "/home//misc/GLKH-1.0/"
@@ -21,18 +24,7 @@ DEBUG_LEVEL = 0
 logger = get_logger("main")
 
 
-def pretty_print_decomposition(decomposition):
-    """Pretty print for polygons."""
-    print("[..] decompositionosition:")
-    for idx, poly in enumerate(decomposition):
-        print("%2d: "%idx),
-        boundary = poly[0]
-        for elem in boundary:
-            print("(%.2f, %.2f), "%(elem[0],elem[1])),
-        print("\n"),
-
-
-def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
+def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 1):
     """
     Main function that orchestrates distrubted planner and plots the results.
 
@@ -50,7 +42,6 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     # Initialize plotting tools
     ax_old = splot.init_axis("Original Decomposition", "+0+100")
     ax_new = splot.init_axis("Reoptimized Decomposition", "+700+100")
-
 
     #polygon, cell_to_site_map, decomposition = decomposition_generator(poly_id)
     decomposition = decomposition_generator(poly_id)
@@ -75,15 +66,16 @@ def distributed_planner(poly_id: int = 0, num_reopt_iters: int = 10):
     logger.info("Old costs: %s", old_costs)
     logger.info("New costs: %s", new_costs)
 
-    # # Each cell is further decomposition for path planning purposes.
-    # ax_cvx = splot.init_axis("Convex Decomposition", "+0+100")
-    # for cell_id, polygon, site in decomposition.items():
-    #     dec = greedy_decomposition(polygon)
-    #     splot.plot_decomposition(ax_cvx, dec)
+    # robot = Robot(0.05, '')
+    # for cell_id, _, _ in decomposition.items():
+    #     single_polygon = decomposition.canonical_cells[cell_id]
+    #     single_decomposition, adjacency_matrix, segments, tour, mapping = \
+    #         coverage_path_planner(polygon=single_polygon, robot=robot)
+    #     single_splot.plot_decomposition(ax_new, single_decomposition, adjacency_matrix, single_polygon)
+        # single_splot.plot_samples(ax_new, segments)
+        # single_splot.plot_tour_dubins(ax_new, tour, mapping, robot.footprint_radius)
 
-
-
-    # Send the plot command
+    # # Send the plot command
     splot.display()
 
 

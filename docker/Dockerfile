@@ -28,6 +28,5 @@ RUN cd /tmp \
     && ln -s /tmp/GLKH-1.0/GLKH /bin
 
 WORKDIR /workspace
-RUN ln -s /tmp/GLKH-1.0/LKH /workspace \
-    && mkdir TMP
+RUN ln -s /tmp/GLKH-1.0/LKH /workspace
 

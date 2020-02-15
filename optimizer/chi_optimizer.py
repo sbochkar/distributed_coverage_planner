@@ -2,6 +2,7 @@
 from itertools import product
 from functools import partial
 from typing import List, Tuple, Optional
+from multiprocessing import Process
 import sys
 
 from numpy import linspace
@@ -150,41 +151,43 @@ class ChiOptimizer():
         # List is traversed from lowest cost to highest.
         for cell_id, cell_chi_cost in sorted_neighbor_chi_costs:
 
-            if cell_chi_cost < max_vertex_cost:
-                self.logger.debug("Attempting reopt %d and %d.", max_vertex_id, cell_id)
+            if cell_chi_cost >= max_vertex_cost:
+                continue
 
-                result = self.compute_pairwise_optimal(
-                    polygon_a=decomposition[max_vertex_id][0],
-                    polygon_b=decomposition[cell_id][0],
-                    robot_a_init_pos=decomposition[max_vertex_id][1],
-                    robot_b_init_pos=decomposition[cell_id][1])
+            self.logger.debug("Attempting reopt %d and %d.", max_vertex_id, cell_id)
 
-                if result is None:
-                    if self.dft_recursion(decomposition=decomposition,
-                                          adjacency_matrix=adjacency_matrix,
-                                          max_vertex_id=cell_id):
-                        return True
-                    continue
+            result = self.compute_pairwise_optimal(
+                polygon_a=decomposition[max_vertex_id][0],
+                polygon_b=decomposition[cell_id][0],
+                robot_a_init_pos=decomposition[max_vertex_id][1],
+                robot_b_init_pos=decomposition[cell_id][1])
 
-                if result:
-                    # Resolve cell-robot assignments here.
-                    # This is to avoid the issue of cell assignments that
-                    # don't make any sense after polygon cut.
-                    chi_a0 = self.cost_func(result[0], decomposition[max_vertex_id][1])
-                    chi_a1 = self.cost_func(result[1], decomposition[max_vertex_id][1])
-                    chi_b0 = self.cost_func(result[0], decomposition[cell_id][1])
-                    chi_b1 = self.cost_func(result[1], decomposition[cell_id][1])
-
-                    if max(chi_a0, chi_b1) <= max(chi_a1, chi_b0):
-                        decomposition[max_vertex_id], decomposition[cell_id] = result
-                    else:
-                        decomposition[cell_id], decomposition[max_vertex_id] = result
-
-                    self.logger.debug("Cells %d and %d reopted.", max_vertex_id, cell_id)
-
-                    adjacency_matrix = compute_adjacency(decomposition)
-
+            if result is None:
+                if self.dft_recursion(decomposition=decomposition,
+                                      adjacency_matrix=adjacency_matrix,
+                                      max_vertex_id=cell_id):
                     return True
+                continue
+
+            if result:
+                # Resolve cell-robot assignments here.
+                # This is to avoid the issue of cell assignments that
+                # don't make any sense after polygon cut.
+                chi_a0 = self.cost_func(result[0], decomposition[max_vertex_id][1])
+                chi_a1 = self.cost_func(result[1], decomposition[max_vertex_id][1])
+                chi_b0 = self.cost_func(result[0], decomposition[cell_id][1])
+                chi_b1 = self.cost_func(result[1], decomposition[cell_id][1])
+
+                if max(chi_a0, chi_b1) <= max(chi_a1, chi_b0):
+                    decomposition[max_vertex_id], decomposition[cell_id] = result
+                else:
+                    decomposition[cell_id], decomposition[max_vertex_id] = result
+
+                self.logger.debug("Cells %d and %d reopted.", max_vertex_id, cell_id)
+
+                adjacency_matrix = compute_adjacency(decomposition)
+
+                return True
 
         return False
 

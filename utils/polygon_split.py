@@ -41,7 +41,7 @@ def polygon_split(polygon: Polygon, split_line: LineString) -> Optional[Tuple[Po
     # This calculates the points on the boundary where the split will happen.
     ext_line = polygon.exterior
     common_pts = ext_line.intersection(split_line)
-    logger.debug("Cut: %s Intersection: %s"%(split_line, common_pts))
+    logger.debug("Cut: %s Intersection: %s", split_line, common_pts)
 
     # No intersection check.
     if not common_pts:
@@ -75,8 +75,8 @@ def polygon_split(polygon: Polygon, split_line: LineString) -> Optional[Tuple[Po
     #    is guaranteed to be the right combo. For now, place a check.
     if len(split_boundary) == 3:
         if split_boundary[0].coords[0] != split_boundary[-1].coords[-1]:
-            logger.warn("The assumption that pts0[0] == pts2[-1] DOES not hold. Need"
-                        " to investigate.")
+            logger.warning("The assumption that pts0[0] == pts2[-1] DOES not hold. Need"
+                           " to investigate.")
             return None
 
         line1 = LineString(
